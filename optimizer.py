@@ -248,15 +248,18 @@ class OffPolicyAsyncOptimizer(object):
             for learner, objID in self.learn_tasks.completed():
                 grads = ray.get(objID)
                 learner_stats = ray.get(learner.get_stats.remote())
-                if self.args.buffer_type == 'priority':
-                    info_for_buffer = ray.get(learner.get_info_for_buffer.remote())
-                    info_for_buffer['rb'].update_priorities.remote(info_for_buffer['indexes'],
-                                                                   info_for_buffer['td_error'])
+                # self.args.buffer_type 默认值为 normal
+                # if self.args.buffer_type == 'priority':
+                #     info_for_buffer = ray.get(learner.get_info_for_buffer.remote())
+                #     info_for_buffer['rb'].update_priorities.remote(info_for_buffer['indexes'],
+                #                                                    info_for_buffer['td_error'])
                 rb, samples = self.learner_queue.get(block=False)
-                if ppc_params and \
-                        (self.args.obs_preprocess_type == 'normalize' or self.args.reward_preprocess_type == 'normalize'):
-                    learner.set_ppc_params.remote(ppc_params)
-                    self.local_worker.set_ppc_params(ppc_params)
+
+                # self.args.obs_preprocess_type 默认值为 scale
+                # if ppc_params and \
+                #         (self.args.obs_preprocess_type == 'normalize' or self.args.reward_preprocess_type == 'normalize'):
+                #     learner.set_ppc_params.remote(ppc_params)
+                #     self.local_worker.set_ppc_params(ppc_params)
                 if weights is None:
                     weights = ray.put(self.local_worker.get_weights())
                 learner.set_weights.remote(weights)

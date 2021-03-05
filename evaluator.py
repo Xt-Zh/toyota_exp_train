@@ -134,96 +134,96 @@ class Evaluator(object):
             logger.info('Evaluator_info: {}, {}'.format(self.get_stats(),n_info_dict))
         self.eval_times += 1
 
-    def compute_action_from_batch_obses(self, path):
-        obses = np.load(path)
-        preprocess_obs = self.preprocessor.np_process_obses(obses)
-        action = self.policy_with_value.compute_mode(preprocess_obs)
-        action_np = action.numpy()
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.plot(range(action_np.shape[0]), action_np[:,0])
-        plt.show()
-        a = 1
+    # def compute_action_from_batch_obses(self, path):
+    #     obses = np.load(path)
+    #     preprocess_obs = self.preprocessor.np_process_obses(obses)
+    #     action = self.policy_with_value.compute_mode(preprocess_obs)
+    #     action_np = action.numpy()
+    #     import matplotlib.pyplot as plt
+    #     plt.figure()
+    #     plt.plot(range(action_np.shape[0]), action_np[:,0])
+    #     plt.show()
+    #     a = 1
 
-    def static_region(self):
-        d = np.linspace(-10,10,100)
-        v = np.linspace(-10,10,100)
-
-        D, V = np.meshgrid(d, v)
-        flattenD = np.reshape(D, [-1,])
-        flattenV = np.reshape(V, [-1,])
-        obses = np.stack([flattenD, flattenV], 1)
-        preprocess_obs = self.preprocessor.np_process_obses(obses)
-        flattenMU = self.policy_with_value.compute_mu(preprocess_obs).numpy()
-        # flattenMU_max = np.max(flattenMU,axis=1)
-        for k in range(flattenMU.shape[1]):
-            flattenMU_k = flattenMU[:, k]
-            mu = flattenMU_k.reshape(D.shape)
-            def plot_region(z, name):
-                import matplotlib.pyplot as plt
-                from mpl_toolkits.mplot3d import Axes3D
-                plt.figure()
-                plt.contourf(D,V,z,50,cmap='rainbow')
-                plt.grid()
-                # plt.plot(d, np.sqrt(2*5*d),lw=2)
-                name_2d=name + '_2d.jpg'
-                plt.savefig(os.path.join(self.log_dir, name_2d))
-
-                figure = plt.figure()
-                ax = Axes3D(figure)
-                ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
-                # plt.show()
-                name_3d = name + '_3d.jpg'
-                plt.savefig(os.path.join(self.log_dir,name_3d))
-            plot_region(mu, str(k))
-
-
-def test_trained_model(model_dir, ppc_params_dir, iteration):
-    from train_script import built_mixedpg_parser
-    from policy import PolicyWithQs
-    args = built_mixedpg_parser()
-    evaluator = Evaluator(PolicyWithQs, args.env_id, args)
-    evaluator.load_weights(model_dir, iteration)
-    evaluator.load_ppc_params(ppc_params_dir)
-    return evaluator.metrics(1000, render=False, reset=False)
-
-def atest_trained_model(model_dir, ppc_params_dir, iteration):
-    from train_script import built_AMPC_parser
-    from policy import Policy4Toyota
-    args = built_AMPC_parser()
-    evaluator = Evaluator(Policy4Toyota, args.env_id, args)
-    evaluator.load_weights(model_dir, iteration)
-    # evaluator.load_ppc_params(ppc_params_dir)
-    path = model_dir + '/all_obs.npy'
-    evaluator.compute_action_from_batch_obses(path)
-
-def static_region(model_dir, iteration):
-    from train_script import built_LMAMPC_parser
-    from policy import Policy4Lagrange
-    args = built_LMAMPC_parser()
-    args.obs_dim = 2
-    args.act_dim = 1
-    args.obs_scale = [0.1, 0.1]
-    evaluator = Evaluator(Policy4Lagrange, args.env_id, args)
-    evaluator.load_weights(model_dir, iteration)
-    # evaluator.load_ppc_params(ppc_params_dir)
-    # path = model_dir + '/all_obs.npy'
-    evaluator.static_region()
-
-def test_evaluator():
-    import ray
-    ray.init()
-    import time
-    from train_script import built_parser
-    from policy import Policy4Toyota
-    args = built_parser('AMPC')
-
-    # evaluator = Evaluator(Policy4Toyota, args.env_id, args)
-    # evaluator.run_evaluation(3)
-    evaluator = ray.remote(num_cpus=1)(Evaluator).remote(Policy4Toyota, args.env_id, args)
-    evaluator.run_evaluation.remote(3)
-    time.sleep(10000)
+    # def static_region(self):
+    #     d = np.linspace(-10,10,100)
+    #     v = np.linspace(-10,10,100)
+    #
+    #     D, V = np.meshgrid(d, v)
+    #     flattenD = np.reshape(D, [-1,])
+    #     flattenV = np.reshape(V, [-1,])
+    #     obses = np.stack([flattenD, flattenV], 1)
+    #     preprocess_obs = self.preprocessor.np_process_obses(obses)
+    #     flattenMU = self.policy_with_value.compute_mu(preprocess_obs).numpy()
+    #     # flattenMU_max = np.max(flattenMU,axis=1)
+    #     for k in range(flattenMU.shape[1]):
+    #         flattenMU_k = flattenMU[:, k]
+    #         mu = flattenMU_k.reshape(D.shape)
+    #         def plot_region(z, name):
+    #             import matplotlib.pyplot as plt
+    #             from mpl_toolkits.mplot3d import Axes3D
+    #             plt.figure()
+    #             plt.contourf(D,V,z,50,cmap='rainbow')
+    #             plt.grid()
+    #             # plt.plot(d, np.sqrt(2*5*d),lw=2)
+    #             name_2d=name + '_2d.jpg'
+    #             plt.savefig(os.path.join(self.log_dir, name_2d))
+    #
+    #             figure = plt.figure()
+    #             ax = Axes3D(figure)
+    #             ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
+    #             # plt.show()
+    #             name_3d = name + '_3d.jpg'
+    #             plt.savefig(os.path.join(self.log_dir,name_3d))
+    #         plot_region(mu, str(k))
 
 
-if __name__ == '__main__':
-    static_region('./results/toyota3lane/experiment-2021-03-03-12-31-33/models', 100000)
+# def test_trained_model(model_dir, ppc_params_dir, iteration):
+#     from train_script import built_mixedpg_parser
+#     from policy import PolicyWithQs
+#     args = built_mixedpg_parser()
+#     evaluator = Evaluator(PolicyWithQs, args.env_id, args)
+#     evaluator.load_weights(model_dir, iteration)
+#     evaluator.load_ppc_params(ppc_params_dir)
+#     return evaluator.metrics(1000, render=False, reset=False)
+#
+# def atest_trained_model(model_dir, ppc_params_dir, iteration):
+#     from train_script import built_AMPC_parser
+#     from policy import Policy4Toyota
+#     args = built_AMPC_parser()
+#     evaluator = Evaluator(Policy4Toyota, args.env_id, args)
+#     evaluator.load_weights(model_dir, iteration)
+#     # evaluator.load_ppc_params(ppc_params_dir)
+#     path = model_dir + '/all_obs.npy'
+#     evaluator.compute_action_from_batch_obses(path)
+
+# def static_region(model_dir, iteration):
+#     from train_script import built_LMAMPC_parser
+#     from policy import Policy4Lagrange
+#     args = built_LMAMPC_parser()
+#     args.obs_dim = 2
+#     args.act_dim = 1
+#     args.obs_scale = [0.1, 0.1]
+#     evaluator = Evaluator(Policy4Lagrange, args.env_id, args)
+#     evaluator.load_weights(model_dir, iteration)
+#     # evaluator.load_ppc_params(ppc_params_dir)
+#     # path = model_dir + '/all_obs.npy'
+#     evaluator.static_region()
+
+# def test_evaluator():
+#     import ray
+#     ray.init()
+#     import time
+#     from train_script import built_parser
+#     from policy import Policy4Toyota
+#     args = built_parser('AMPC')
+#
+#     # evaluator = Evaluator(Policy4Toyota, args.env_id, args)
+#     # evaluator.run_evaluation(3)
+#     evaluator = ray.remote(num_cpus=1)(Evaluator).remote(Policy4Toyota, args.env_id, args)
+#     evaluator.run_evaluation.remote(3)
+#     time.sleep(10000)
+
+
+# if __name__ == '__main__':
+    # static_region('./results/toyota3lane/experiment-2021-03-03-12-31-33/models', 100000)

@@ -34,7 +34,7 @@ class AMPCLearner(object):
         self.policy_with_value = policy_cls(self.args)
         self.batch_data = {}
         self.all_data = {}
-        self.M = self.args.M
+        self.M = self.args.M # 默认为1.0
         self.num_rollout_list_for_policy_update = self.args.num_rollout_list_for_policy_update
 
         self.model = EnvironmentModel(**args2envkwargs(args))
@@ -70,13 +70,20 @@ class AMPCLearner(object):
         self.preprocessor.set_params(params)
 
     def punish_factor_schedule(self, ite):
-        init_pf = self.args.init_punish_factor
-        interval = self.args.pf_enlarge_interval
-        amplifier = self.args.pf_amplifier
+        init_pf = self.args.init_punish_factor # 默认为10.0
+        interval = self.args.pf_enlarge_interval # 默认为20000
+        amplifier = self.args.pf_amplifier # 默认为1.0
         pf = init_pf * self.tf.pow(amplifier, self.tf.cast(ite//interval, self.tf.float32))
         return pf
 
     def model_rollout_for_update(self, start_obses, ite, mb_ref_index):
+        """
+        该函数全部在梯度环境下运行，该函数只被forward_and_backward调用
+        :param start_obses:
+        :param ite:
+        :param mb_ref_index:
+        :return:
+        """
         start_obses = self.tf.tile(start_obses, [self.M, 1])
         self.model.reset(start_obses, mb_ref_index)
         rewards_sum = self.tf.zeros((start_obses.shape[0],))

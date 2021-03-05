@@ -30,9 +30,9 @@ class Trainer(object):
                 self.local_worker = worker_cls(policy_cls, learner_cls, self.args.env_id, self.args, 0)
                 self.optimizer = optimizer_cls(self.local_worker, self.evaluator, self.args)
 
-        else:
+        else: #实际上在使用这个：OffPolicyAsync
             self.evaluator = ray.remote(num_cpus=1)(evaluator_cls).remote(policy_cls, self.args.env_id, self.args)
-            if self.args.off_policy:
+            if self.args.off_policy: # 默认为此
                 self.local_worker = worker_cls(policy_cls, self.args.env_id, self.args, 0)
                 self.remote_workers = [
                     ray.remote(num_cpus=1)(worker_cls).remote(policy_cls, self.args.env_id, self.args, i + 1)
@@ -73,7 +73,7 @@ class Trainer(object):
         for e in self.workers['remote_workers']:
             e.set_weights.remote(weights)
 
-    def train(self):
+    def train(self): # 让 optimizer step 一下。
         logger.info('training beginning')
         while self.optimizer.num_sampled_steps < self.args.max_sampled_steps \
                 or self.optimizer.iteration < self.args.max_iter:

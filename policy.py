@@ -17,7 +17,7 @@ from model import MLPNet
 NAME2MODELCLS = dict([('MLP', MLPNet),])
 
 
-class Policy4Toyota(tf.Module):
+class Policy4Toyota(tf.Module): # 它只有policy network
     import tensorflow as tf
     import tensorflow_probability as tfp
     tfd = tfp.distributions
@@ -71,7 +71,7 @@ class Policy4Toyota(tf.Module):
     def compute_action(self, obs):
         with self.tf.name_scope('compute_action') as scope:
             logits = self.policy(obs)
-            if self.args.deterministic_policy:
+            if self.args.deterministic_policy: # 默认为真
                 mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
                 return self.args.action_range * self.tf.tanh(mean) if self.args.action_range is not None else mean, 0.
 

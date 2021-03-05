@@ -72,12 +72,12 @@ class LMAMPCLearner2(object):
     def set_ppc_params(self, params):
         self.preprocessor.set_params(params)
 
-    def punish_factor_schedule(self, ite):
-        init_pf = self.args.init_punish_factor
-        interval = self.args.pf_enlarge_interval
-        amplifier = self.args.pf_amplifier
-        pf = init_pf * self.tf.pow(amplifier, self.tf.cast(ite//interval, self.tf.float32))
-        return pf
+    # def punish_factor_schedule(self, ite):
+    #     init_pf = self.args.init_punish_factor
+    #     interval = self.args.pf_enlarge_interval
+    #     amplifier = self.args.pf_amplifier
+    #     pf = init_pf * self.tf.pow(amplifier, self.tf.cast(ite//interval, self.tf.float32))
+    #     return pf
 
     def model_rollout_for_update(self, start_obses, ite):
         start_obses = self.tf.tile(start_obses, [self.M, 1])
@@ -139,12 +139,12 @@ class LMAMPCLearner2(object):
 
         return pg_grad, mu_grad, obj_loss, punish_terms, cs_loss, pg_loss, constraints
 
-    def export_graph(self, writer):
-        mb_obs = self.batch_data['batch_obs']
-        self.tf.summary.trace_on(graph=True, profiler=False)
-        self.forward_and_backward(mb_obs, self.tf.convert_to_tensor(0, self.tf.int32))
-        with writer.as_default():
-            self.tf.summary.trace_export(name="policy_forward_and_backward", step=0)
+    # def export_graph(self, writer):
+    #     mb_obs = self.batch_data['batch_obs']
+    #     self.tf.summary.trace_on(graph=True, profiler=False)
+    #     self.forward_and_backward(mb_obs, self.tf.convert_to_tensor(0, self.tf.int32))
+    #     with writer.as_default():
+    #         self.tf.summary.trace_export(name="policy_forward_and_backward", step=0)
 
     def compute_gradient(self, samples, rb, indexs, iteration):
         self.get_batch_data(samples, rb, indexs)
