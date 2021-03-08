@@ -225,33 +225,30 @@ class Policy4Braking(tf.Module):
         optimizer_pairs = [(optimizer._name, optimizer) for optimizer in self.optimizers]
         ckpt = self.tf.train.Checkpoint(**dict(model_pairs + optimizer_pairs))
         ckpt.save(save_dir + '/ckpt_ite' + str(iteration))
-
     def load_weights(self, load_dir, iteration):
         model_pairs = [(model.name, model) for model in self.models]
         optimizer_pairs = [(optimizer._name, optimizer) for optimizer in self.optimizers]
         ckpt = self.tf.train.Checkpoint(**dict(model_pairs + optimizer_pairs))
         ckpt.restore(load_dir + '/ckpt_ite' + str(iteration) + '-1')
-
     def get_weights(self):
         return [model.get_weights() for model in self.models]
-
     def set_weights(self, weights):
         for i, weight in enumerate(weights):
             self.models[i].set_weights(weight)
 
     @tf.function
-    def apply_gradients(self, iteration, grads):
-        policy_len = len(self.policy.trainable_weights)
-        policy_grad, mu_grad = grads[:policy_len], grads[policy_len:]
-        self.policy_optimizer.apply_gradients(zip(policy_grad, self.policy.trainable_weights))
-        if iteration % self.args.mu_update_interval == 0:
-            self.mu_optimizer.apply_gradients(zip(mu_grad, self.mu.trainable_weights))
+    def apply_gradients(self, grads):
+        actor_len = len(self.actor.trainable_weights)
+        critic_len = len(self.critic.trainable_weights)
+        actor_grad, critic_grad = grads[:actor_len], grads[critic_len:]
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.policy.trainable_weights))
+        self.critic_optimizer.apply_gradients(zip(critic_grad, self.policy.trainable_weights))
 
     @tf.function
     def compute_mode(self, obs):
-        logits = self.policy(obs)
-        mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-        return self.args.action_range * self.tf.tanh(mean) if self.args.action_range is not None else mean
+        logits = self.actor(obs)
+        mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1) #取前一半是为什么？
+        return mean
 
     # def _logits2dist(self, logits):
     #     mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
@@ -272,7 +269,13 @@ class Policy4Braking(tf.Module):
             logits = self.policy(obs)
             assert self.args.deterministic_policy
             mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-            return self.args.action_range * self.tf.tanh(mean) if self.args.action_range is not None else mean, 0.
+            return mean, 0.
+
+    def compute_value(self, obs):
+        with tf.name_scope("compute_value") as scope:
+            logits = self.critic(obs)
+            mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
+            return mean,0.
 
     # @tf.function
     # def compute_obj_v(self, obs):

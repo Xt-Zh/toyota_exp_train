@@ -3,13 +3,12 @@
 
 # =====================================
 # @Time    : 2020/9/1
-# @Author  : Yang Guan (Tsinghua Univ.)
+# @Author  : z
 # @FileName: ampc.py
 # =====================================
 
 import logging
 
-import gym
 import numpy as np
 from gym.envs.user_defined.EmerBrake.models import EmBrakeModel
 
@@ -31,16 +30,18 @@ class MyBrakingLearner(object):
                                                   'function_optimization': True,
                                                   })
 
-    def __init__(self, policy_cls, args):
+    def __init__(self, policy_cls, value_cls, args):
         self.args = args
         self.policy_with_value = policy_cls(self.args)
+        self.value_function = value_cls(self.args)
         self.batch_data = {}
         self.all_data = {}
         self.M = self.args.M
         self.num_rollout_list_for_policy_update = self.args.num_rollout_list_for_policy_update
 
         self.model = EmBrakeModel()
-        self.preprocessor = Preprocessor((self.args.obs_dim, ), self.args.obs_preprocess_type, self.args.reward_preprocess_type,
+        self.preprocessor = Preprocessor((self.args.obs_dim,), self.args.obs_preprocess_type,
+                                         self.args.reward_preprocess_type,
                                          self.args.obs_scale, self.args.reward_scale, self.args.reward_shift,
                                          gamma=self.args.gamma)
         self.grad_timer = TimerStat()
@@ -71,41 +72,30 @@ class MyBrakingLearner(object):
     def set_ppc_params(self, params):
         self.preprocessor.set_params(params)
 
-    def model_rollout_for_update(self, start_obses, ite):
-        start_obses = self.tf.tile(start_obses, [self.M, 1])
+    def model_rollout_for_update(self, start_obses):
         self.model.reset(start_obses)
-        rewards_sum = self.tf.zeros((start_obses.shape[0],))
         obses = start_obses
-        constraints_list = []
+        reward_list = []
         for step in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
-            actions, _ = self.policy_with_value.compute_action(processed_obses)
-            obses, rewards, constraints = self.model.rollout_out(actions)
-            constraints_clip = self.tf.clip_by_value(constraints, CONSTRAINTS_CLIP_MINUS, 100)
-            constraints_list.append(self.tf.expand_dims(constraints_clip, axis=1))
-        constraints_all =self.tf.concat(constraints_list, 1)
-        processed_start_obses = self.preprocessor.tf_process_obses(start_obses)
-        mu_all = self.policy_with_value.compute_mu(processed_start_obses)
-        cs_sum = self.tf.reduce_sum(self.tf.multiply(mu_all, self.tf.stop_gradient(constraints_all)), 1)
-        punish_terms_sum = self.tf.reduce_sum(self.tf.multiply(self.tf.stop_gradient(mu_all), constraints_all),1)
+            actions = self.policy_with_value.compute_action(processed_obses)
+            values = self.value_function.compute_action(processed_obses)
+            obses, rewards = self.model.rollout_out(actions)
+            reward_list.append(rewards)
+        reward_list.append(self.value_function(obses))
+        total_reward = self.tf.reduce_sum(reward_list)
 
-        obj_loss = -self.tf.reduce_mean(rewards_sum)
-        punish_terms = self.tf.reduce_mean(punish_terms_sum)
-        pg_loss = obj_loss + punish_terms
-        cs_loss = -self.tf.reduce_mean(cs_sum)
-        constraints = self.tf.reduce_mean(constraints_all)
-
-        return obj_loss, punish_terms, cs_loss, pg_loss, constraints
+        return total_reward
 
     def forward_and_backward(self, mb_obs, ite):
         with self.tf.GradientTape(persistent=True) as tape:
-            obj_loss, punish_terms, cs_loss, pg_loss, constraints = self.model_rollout_for_update(mb_obs, ite)
+            actor_loss, value_loss = self.model_rollout_for_update(mb_obs)
 
         with self.tf.name_scope('policy_gradient') as scope:
-            pg_grad = tape.gradient(pg_loss, self.policy_with_value.policy.trainable_weights)
-            mu_grad = tape.gradient(cs_loss, self.policy_with_value.mu.trainable_weights) #TODO: why use -pg_loss here lead to no grad?
+            actor_grad = tape.gradient(actor_loss, self.policy_with_value.policy.trainable_weights)
+            critic_grad = tape.gradient(value_loss, self.value_function.trainable_weights)
 
-        return pg_grad, mu_grad, obj_loss, punish_terms, cs_loss, pg_loss, constraints
+        return actor_grad, critic_grad, actor_loss, value_loss
 
     def compute_gradient(self, samples, rb, indexs, iteration):
         self.get_batch_data(samples, rb, indexs)
@@ -114,25 +104,21 @@ class MyBrakingLearner(object):
         # mb_ref_index = self.tf.constant(self.batch_data['batch_ref_index'], self.tf.int32)
 
         with self.grad_timer:
-            pg_grad, mu_grad, obj_loss, punish_terms, cs_loss, pg_loss, constraints =\
-                self.forward_and_backward(mb_obs, iteration)
+            actor_grad, critic_grad, actor_loss, value_loss = self.forward_and_backward(mb_obs, iteration)
 
-            obj_grad, pg_grad_norm = self.tf.clip_by_global_norm(pg_grad, self.args.gradient_clip_norm)
-            mu_grad, mu_grad_norm = self.tf.clip_by_global_norm(mu_grad, self.args.gradient_clip_norm)
+            actor_grad, actor_grad_norm = self.tf.clip_by_global_norm(actor_grad, self.args.gradient_clip_norm)
+            critic_grad, critic_grad_norm = self.tf.clip_by_global_norm(critic_grad, self.args.gradient_clip_norm)
 
         self.stats.update(dict(
             iteration=iteration,
             grad_time=self.grad_timer.mean,
-            obj_loss=obj_loss.numpy(),
-            punish_terms=punish_terms.numpy(),
-            constraints=constraints.numpy(),
-            cs_loss=cs_loss.numpy(),
-            pg_loss=pg_loss.numpy(),
-            pg_grads_norm=pg_grad_norm.numpy(),
-            mu_grad_norm=mu_grad_norm.numpy()
+            actor_loss=actor_loss.numpy(),
+            value_loss=value_loss.numpy(),
+            actor_grad_norm=actor_grad_norm.numpy(),
+            critic_grad_norm=critic_grad_norm.numpy()
         ))
 
-        grads = obj_grad  + mu_grad
+        grads = actor_grad + critic_grad
 
         return list(map(lambda x: x.numpy(), grads))
 
