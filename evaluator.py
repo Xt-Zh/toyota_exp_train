@@ -141,17 +141,6 @@ class Evaluator(object):
             logger.info('Evaluator_info: {}, {}'.format(self.get_stats(),n_info_dict))
         self.eval_times += 1
 
-    # def compute_action_from_batch_obses(self, path):
-    #     obses = np.load(path)
-    #     preprocess_obs = self.preprocessor.np_process_obses(obses)
-    #     action = self.policy_with_value.compute_mode(preprocess_obs)
-    #     action_np = action.numpy()
-    #     import matplotlib.pyplot as plt
-    #     plt.figure()
-    #     plt.plot(range(action_np.shape[0]), action_np[:,0])
-    #     plt.show()
-    #     a = 1
-
     #TODO: 绘图
 
     def static_region(self):
@@ -185,54 +174,3 @@ class Evaluator(object):
                 name_3d = name + '_3d.jpg'
                 plt.savefig(os.path.join(self.log_dir,name_3d))
             plot_region(critic, str(k))
-
-
-# def test_trained_model(model_dir, ppc_params_dir, iteration):
-#     from train_script import built_mixedpg_parser
-#     from policy import PolicyWithQs
-#     args = built_mixedpg_parser()
-#     evaluator = Evaluator(PolicyWithQs, args.env_id, args)
-#     evaluator.load_weights(model_dir, iteration)
-#     evaluator.load_ppc_params(ppc_params_dir)
-#     return evaluator.metrics(1000, render=False, reset=False)
-#
-# def atest_trained_model(model_dir, ppc_params_dir, iteration):
-#     from train_script import built_AMPC_parser
-#     from policy import Policy4Toyota
-#     args = built_AMPC_parser()
-#     evaluator = Evaluator(Policy4Toyota, args.env_id, args)
-#     evaluator.load_weights(model_dir, iteration)
-#     # evaluator.load_ppc_params(ppc_params_dir)
-#     path = model_dir + '/all_obs.npy'
-#     evaluator.compute_action_from_batch_obses(path)
-
-# def static_region(model_dir, iteration):
-#     from train_script import built_LMAMPC_parser
-#     from policy import Policy4Lagrange
-#     args = built_LMAMPC_parser()
-#     args.obs_dim = 2
-#     args.act_dim = 1
-#     args.obs_scale = [0.1, 0.1]
-#     evaluator = Evaluator(Policy4Lagrange, args.env_id, args)
-#     evaluator.load_weights(model_dir, iteration)
-#     # evaluator.load_ppc_params(ppc_params_dir)
-#     # path = model_dir + '/all_obs.npy'
-#     evaluator.static_region()
-
-# def test_evaluator():
-#     import ray
-#     ray.init()
-#     import time
-#     from train_script import built_parser
-#     from policy import Policy4Toyota
-#     args = built_parser('AMPC')
-#
-#     # evaluator = Evaluator(Policy4Toyota, args.env_id, args)
-#     # evaluator.run_evaluation(3)
-#     evaluator = ray.remote(num_cpus=1)(Evaluator).remote(Policy4Toyota, args.env_id, args)
-#     evaluator.run_evaluation.remote(3)
-#     time.sleep(10000)
-
-
-# if __name__ == '__main__':
-    # static_region('./results/toyota3lane/experiment-2021-03-03-12-31-33/models', 100000)

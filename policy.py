@@ -213,8 +213,7 @@ class ActorCritic4Braking(tf.Module):
         self.actor_optimizer = self.tf.keras.optimizers.Adam(actor_lr_schedule, name='adam_opt')
 
         # 定义critic
-        self.critic = policy_model_cls(obs_dim, n_hiddens, n_units, hidden_activation, act_dim * 2, name='critic',
-                                       output_activation=self.args.policy_out_activation)
+        self.critic = policy_model_cls(obs_dim, n_hiddens, n_units, hidden_activation, act_dim * 2, name='critic')
         critic_lr_schedule = PolynomialDecay(*self.args.policy_lr_schedule)
         self.critic_optimizer = self.tf.keras.optimizers.Adam(critic_lr_schedule, name='adam_opt')
 

@@ -76,7 +76,8 @@ def built_LMAMPC_parser():
     parser.add_argument('--worker_type', type=str, default='OffPolicyWorker')
     parser.add_argument('--evaluator_type', type=str, default='Evaluator')
     parser.add_argument('--buffer_type', type=str, default='normal')
-    parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
+    # parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
+    parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
     parser.add_argument('--off_policy', type=str, default=True)
 
     # env
@@ -143,13 +144,13 @@ def built_LMAMPC_parser():
     # optimizer (PABAL)
     parser.add_argument('--max_sampled_steps', type=int, default=0)
     parser.add_argument('--max_iter', type=int, default=500100)
-    parser.add_argument('--num_workers', type=int, default=2)
-    parser.add_argument('--num_learners', type=int, default=2)
-    parser.add_argument('--num_buffers', type=int, default=2)
+    parser.add_argument('--num_workers', type=int, default=1)
+    parser.add_argument('--num_learners', type=int, default=5)
+    parser.add_argument('--num_buffers', type=int, default=1)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=30)
-    parser.add_argument('--eval_interval', type=int, default=1000)
-    parser.add_argument('--save_interval', type=int, default=5000)
+    parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--save_interval', type=int, default=200)
     parser.add_argument('--log_interval', type=int, default=100)
 
     # IO
@@ -181,7 +182,8 @@ def main(alg_name):
     args = built_parser(alg_name)
     logger.info('begin training agents with parameter {}'.format(str(args)))
     if args.mode == 'training':
-        ray.init(object_store_memory=5120*1024*1024)
+        ray.init()
+        # ray.init(object_store_memory=5120*1024*1024)
         os.makedirs(args.result_dir)
         with open(args.result_dir + '/config.json', 'w', encoding='utf-8') as f:
             json.dump(vars(args), f, ensure_ascii=False, indent=4)

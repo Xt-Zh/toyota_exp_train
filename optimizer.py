@@ -106,6 +106,8 @@ class UpdateThread(threading.Thread):
             if self.args.obs_preprocess_type == 'normalize' or self.args.reward_preprocess_type == 'normalize':
                 self.evaluator.set_ppc_params.remote(self.local_worker.get_ppc_params())
             self.evaluator.run_evaluation.remote(self.iteration)
+            # 添加绘图命令
+            self.evaluator.static_region.remote()
 
         # save
         if self.iteration % self.args.save_interval == 0:
@@ -226,7 +228,7 @@ class OffPolicyAsyncOptimizer(object):
                 self.steps_since_update[worker] += count
                 ppc_params = worker.get_ppc_params.remote()
                 if self.steps_since_update[worker] >= self.max_weight_sync_delay:
-                    judge_is_nan(self.local_worker.policy_with_value.policy.trainable_weights)
+                    judge_is_nan(self.local_worker.policy_with_value.actor.trainable_weights)
                     if weights is None:
                         weights = ray.put(self.local_worker.get_weights())
                     worker.set_weights.remote(weights)
