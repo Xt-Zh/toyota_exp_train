@@ -277,7 +277,7 @@ class ActorCritic4Braking(tf.Module):
         with tf.name_scope("compute_value") as scope:
             logits = self.critic(obs)
             mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-            return mean, 0.
+            return mean
 
     # @tf.function
     # def compute_obj_v(self, obs):

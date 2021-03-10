@@ -77,17 +77,19 @@ class MyBrakingLearner(object):
         self.model.reset(start_obses)
         obses = start_obses
         critic_target = self.tf.zeros([start_obses.shape[0], 1])
-        safe_info = self.tf.ones([start_obses.shape[0], 1])
+        safe_info = np.ones([start_obses.shape[0], 1])
         for step in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
             actions, _ = self.actor_critic.compute_action(processed_obses)
             obses, rewards = self.model.rollout_out(actions)  # todo: rewards add absorbing
             safe_info=self.model.judge_safety()
             critic_target += rewards  #TODO:加吸收态
-        value, _ = self.actor_critic.compute_value(obses)
-        critic_target += safe_info * value  # todo: critic_target if absorbing, do not add v(s')
+        value = self.actor_critic.compute_value(obses)
+        critic_target += value  # todo: critic_target if absorbing, do not add v(s')
         actor_loss = self.tf.reduce_mean(critic_target)
-        critic_loss = self.tf.stop_gradient(critic_target) - self.actor_critic.compute_value(start_obses)[0]
+        critic_target = critic_target.numpy()
+        critic_target[safe_info==0]=self.model.reward_absorb
+        critic_loss = critic_target - self.actor_critic.compute_value(start_obses)
         critic_loss = self.tf.reduce_mean(self.tf.square(critic_loss) / 2)
 
         return actor_loss, critic_loss

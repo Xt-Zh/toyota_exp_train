@@ -19,7 +19,7 @@ from utils.misc import TimerStat, args2envkwargs
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-render_or_not = True #TODO: 是否绘图
+render_or_not = False #TODO: 是否绘制gym环境
 
 
 class Evaluator(object):
@@ -39,8 +39,12 @@ class Evaluator(object):
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        self.preprocessor = Preprocessor((self.args.obs_dim, ), self.args.obs_preprocess_type, self.args.reward_preprocess_type,
-                                         self.args.obs_scale, self.args.reward_scale, self.args.reward_shift,
+        self.preprocessor = Preprocessor((self.args.obs_dim, ),
+                                         self.args.obs_preprocess_type,
+                                         self.args.reward_preprocess_type,
+                                         self.args.obs_scale,
+                                         self.args.reward_scale,
+                                         self.args.reward_shift,
                                          gamma=self.args.gamma)
 
         self.writer = self.tf.summary.create_file_writer(self.log_dir)
@@ -107,7 +111,7 @@ class Evaluator(object):
         list_of_len = []
         list_of_info_dict = []
         for _ in range(n):
-            logger.info('logging {}-th episode'.format(_))
+            # logger.info('logging {}-th episode'.format(_))
             info_dict = self.run_an_episode(self.args.fixed_steps, self.args.eval_render)
             list_of_info_dict.append(info_dict.copy())
         n_info_dict = dict()
@@ -150,37 +154,37 @@ class Evaluator(object):
 
     #TODO: 绘图
 
-    # def static_region(self):
-    #     d = np.linspace(-10,10,100)
-    #     v = np.linspace(-10,10,100)
-    #
-    #     D, V = np.meshgrid(d, v)
-    #     flattenD = np.reshape(D, [-1,])
-    #     flattenV = np.reshape(V, [-1,])
-    #     obses = np.stack([flattenD, flattenV], 1)
-    #     preprocess_obs = self.preprocessor.np_process_obses(obses)
-    #     flattenMU = self.policy_with_value.compute_mu(preprocess_obs).numpy()
-    #     # flattenMU_max = np.max(flattenMU,axis=1)
-    #     for k in range(flattenMU.shape[1]):
-    #         flattenMU_k = flattenMU[:, k]
-    #         mu = flattenMU_k.reshape(D.shape)
-    #         def plot_region(z, name):
-    #             import matplotlib.pyplot as plt
-    #             from mpl_toolkits.mplot3d import Axes3D
-    #             plt.figure()
-    #             plt.contourf(D,V,z,50,cmap='rainbow')
-    #             plt.grid()
-    #             # plt.plot(d, np.sqrt(2*5*d),lw=2)
-    #             name_2d=name + '_2d.jpg'
-    #             plt.savefig(os.path.join(self.log_dir, name_2d))
-    #
-    #             figure = plt.figure()
-    #             ax = Axes3D(figure)
-    #             ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
-    #             # plt.show()
-    #             name_3d = name + '_3d.jpg'
-    #             plt.savefig(os.path.join(self.log_dir,name_3d))
-    #         plot_region(mu, str(k))
+    def static_region(self):
+        d = np.linspace(-10,10,100)
+        v = np.linspace(-10,10,100)
+
+        D, V = np.meshgrid(d, v)
+        flattenD = np.reshape(D, [-1,])
+        flattenV = np.reshape(V, [-1,])
+        obses = np.stack([flattenD, flattenV], 1)
+        preprocess_obs = self.preprocessor.np_process_obses(obses)
+        flatten_value = self.policy_with_value.compute_value(preprocess_obs).numpy()
+        # flattenMU_max = np.max(flattenMU,axis=1)
+        for k in range(flatten_value.shape[1]):
+            flatten_value_k = flatten_value[:, k]
+            critic = flatten_value_k.reshape(D.shape)
+            def plot_region(z, name):
+                import matplotlib.pyplot as plt
+                from mpl_toolkits.mplot3d import Axes3D
+                plt.figure()
+                plt.contourf(D,V,z,50,cmap='rainbow')
+                plt.grid()
+                # plt.plot(d, np.sqrt(2*5*d),lw=2)
+                name_2d=name + '_2d.jpg'
+                plt.savefig(os.path.join(self.log_dir, name_2d))
+
+                figure = plt.figure()
+                ax = Axes3D(figure)
+                ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
+                # plt.show()
+                name_3d = name + '_3d.jpg'
+                plt.savefig(os.path.join(self.log_dir,name_3d))
+            plot_region(critic, str(k))
 
 
 # def test_trained_model(model_dir, ppc_params_dir, iteration):

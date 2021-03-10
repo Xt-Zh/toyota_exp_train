@@ -295,9 +295,9 @@ class SingleProcessOffPolicyOptimizer(object):
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
 
-        self.args.log_interval = 10
-        self.args.eval_interval = 3000
-        self.args.save_interval = 3000
+        self.args.log_interval = 50
+        self.args.eval_interval = 100 # 画图间隔
+        self.args.save_interval = 100
 
         # fill buffer to replay starts
         logger.info('start filling the replay')
@@ -378,6 +378,8 @@ class SingleProcessOffPolicyOptimizer(object):
             self.evaluator.set_weights(self.worker.get_weights())
             self.evaluator.set_ppc_params(self.worker.get_ppc_params())
             self.evaluator.run_evaluation(self.iteration)
+            #添加绘图命令
+            self.evaluator.static_region()
 
         # save
         if self.iteration % self.args.save_interval == 0:
