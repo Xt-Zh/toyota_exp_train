@@ -19,24 +19,29 @@ import ray
 from buffer import ReplayBuffer
 from evaluator import Evaluator
 from learners.ampc_lag import LMAMPCLearner2
+from learners.braking import MyBrakingLearner
 from optimizer import OffPolicyAsyncOptimizer, SingleProcessOffPolicyOptimizer
-from policy import Policy4Toyota, Policy4Lagrange
+from policy import Policy4Toyota, Policy4Lagrange, ActorCritic4Braking
 from tester import Tester
 from trainer import Trainer
 from worker import OffPolicyWorker
 from utils.misc import TimerStat, args2envkwargs
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 NAME2WORKERCLS = dict([('OffPolicyWorker', OffPolicyWorker)])
-NAME2LEARNERCLS = dict([('LMAMPC-v2', LMAMPCLearner2)])
+NAME2LEARNERCLS = dict([('LMAMPC-v2', LMAMPCLearner2),
+                        ('MyBrakingLearner', MyBrakingLearner)])
 NAME2BUFFERCLS = dict([('normal', ReplayBuffer), ('None', None)])
 NAME2OPTIMIZERCLS = dict([('OffPolicyAsync', OffPolicyAsyncOptimizer),
                           ('SingleProcessOffPolicy', SingleProcessOffPolicyOptimizer)])
-NAME2POLICIES = dict([('Policy4Toyota', Policy4Toyota),('Policy4Lagrange', Policy4Lagrange)])
+NAME2POLICIES = dict([('Policy4Toyota', Policy4Toyota),
+                      ('Policy4Lagrange', Policy4Lagrange),
+                      ('ActorCritic4Braking', ActorCritic4Braking)])
 NAME2EVALUATORS = dict([('Evaluator', Evaluator), ('None', None)])
 
 def built_LMAMPC_parser():
@@ -67,7 +72,7 @@ def built_LMAMPC_parser():
 
 
     # trainer
-    parser.add_argument('--policy_type', type=str, default='Policy4Lagrange')
+    parser.add_argument('--policy_type', type=str, default='ActorCritic4Braking') #策略类名称
     parser.add_argument('--worker_type', type=str, default='OffPolicyWorker')
     parser.add_argument('--evaluator_type', type=str, default='Evaluator')
     parser.add_argument('--buffer_type', type=str, default='normal')
@@ -83,7 +88,7 @@ def built_LMAMPC_parser():
     parser.add_argument('--con_dim', type=int, default=10)
 
     # learner
-    parser.add_argument('--alg_name', default='LMAMPC-v2')
+    parser.add_argument('--alg_name', default='MyBrakingLearner') #学习器的类名
     parser.add_argument('--M', type=int, default=1)
     parser.add_argument('--num_rollout_list_for_policy_update', type=list, default=[10])
     parser.add_argument('--gamma', type=float, default=1.)

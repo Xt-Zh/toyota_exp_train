@@ -30,7 +30,7 @@ class Trainer(object):
                 self.local_worker = worker_cls(policy_cls, learner_cls, self.args.env_id, self.args, 0)
                 self.optimizer = optimizer_cls(self.local_worker, self.evaluator, self.args)
 
-        else: #实际上在使用这个：OffPolicyAsync
+        else: # OffPolicyAsync
             self.evaluator = ray.remote(num_cpus=1)(evaluator_cls).remote(policy_cls, self.args.env_id, self.args)
             if self.args.off_policy: # 默认为此
                 self.local_worker = worker_cls(policy_cls, self.args.env_id, self.args, 0)

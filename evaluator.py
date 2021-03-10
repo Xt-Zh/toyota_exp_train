@@ -19,6 +19,8 @@ from utils.misc import TimerStat, args2envkwargs
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+render_or_not = True #TODO: 是否绘图
+
 
 class Evaluator(object):
     import tensorflow as tf
@@ -61,6 +63,7 @@ class Evaluator(object):
         self.load_ppc_params(ppc_params_load_dir)
 
     def run_an_episode(self, steps=None, render=True):
+        render=render_or_not
         reward_list = []
         reward_info_dict_list = []
         action_list = []
@@ -144,6 +147,8 @@ class Evaluator(object):
     #     plt.plot(range(action_np.shape[0]), action_np[:,0])
     #     plt.show()
     #     a = 1
+
+    #TODO: 绘图
 
     # def static_region(self):
     #     d = np.linspace(-10,10,100)

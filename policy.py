@@ -189,7 +189,7 @@ class Policy4Lagrange(tf.Module):
             return self.mu(obs)
 
 
-class Policy4Braking(tf.Module):
+class ActorCritic4Braking(tf.Module):
     import tensorflow as tf
     import tensorflow_probability as tfp
     tfd = tfp.distributions
@@ -200,7 +200,9 @@ class Policy4Braking(tf.Module):
         super().__init__()
         self.args = args
         obs_dim, act_dim = self.args.obs_dim, self.args.act_dim
-        n_hiddens, n_units, hidden_activation = self.args.num_hidden_layers, self.args.num_hidden_units, self.args.hidden_activation
+        n_hiddens, n_units, hidden_activation = self.args.num_hidden_layers, \
+                                                self.args.num_hidden_units, \
+                                                self.args.hidden_activation
         value_model_cls, policy_model_cls = NAME2MODELCLS[self.args.value_model_cls], \
                                             NAME2MODELCLS[self.args.policy_model_cls]
 
@@ -236,15 +238,15 @@ class Policy4Braking(tf.Module):
         for i, weight in enumerate(weights):
             self.models[i].set_weights(weight)
 
-    @tf.function
-    def apply_gradients(self, grads):
+    # @tf.function
+    def apply_gradients(self, iteration, grads):
         actor_len = len(self.actor.trainable_weights)
         critic_len = len(self.critic.trainable_weights)
         actor_grad, critic_grad = grads[:actor_len], grads[critic_len:]
-        self.actor_optimizer.apply_gradients(zip(actor_grad, self.policy.trainable_weights))
-        self.critic_optimizer.apply_gradients(zip(critic_grad, self.policy.trainable_weights))
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_weights))
+        self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_weights))
 
-    @tf.function
+    # @tf.function
     def compute_mode(self, obs):
         logits = self.actor(obs)
         mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1) #取前一半是为什么？
@@ -263,10 +265,10 @@ class Policy4Braking(tf.Module):
     #             ))
     #     return act_dist
 
-    @tf.function
+    # @tf.function
     def compute_action(self, obs):
         with self.tf.name_scope('compute_action') as scope:
-            logits = self.policy(obs)
+            logits = self.actor(obs)
             assert self.args.deterministic_policy
             mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
             return mean, 0.
@@ -275,7 +277,7 @@ class Policy4Braking(tf.Module):
         with tf.name_scope("compute_value") as scope:
             logits = self.critic(obs)
             mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-            return mean,0.
+            return mean, 0.
 
     # @tf.function
     # def compute_obj_v(self, obs):
@@ -291,6 +293,8 @@ class Policy4Braking(tf.Module):
     # def compute_mu(self, obs):
     #     with self.tf.name_scope('compute_mu') as scope:
     #         return self.mu(obs)
+
+
 
 def test_policy():
     import gym
