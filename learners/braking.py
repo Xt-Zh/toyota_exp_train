@@ -48,7 +48,6 @@ class MyBrakingLearner(object):
         self.grad_timer = TimerStat()
         self.stats = {}
         self.info_for_buffer = {}
-        # self.constraint_total_dim = args.num_rollout_list_for_policy_update[0] * self.model.constraints_num
 
     def get_stats(self):
         return self.stats
@@ -86,7 +85,7 @@ class MyBrakingLearner(object):
             critic_target += rewards  #TODO:加吸收态
         value = self.actor_critic.compute_value(obses)
         critic_target += value  # todo: critic_target if absorbing, do not add v(s')
-        actor_loss = self.tf.reduce_mean(critic_target)
+        actor_loss = -self.tf.reduce_mean(critic_target) #目的是最大化\sum l(x,u)+V，也就是最小化它的负值
         critic_target = critic_target.numpy()
         critic_target[safe_info==0]=self.model.reward_absorb
         critic_loss = critic_target - self.actor_critic.compute_value(start_obses)

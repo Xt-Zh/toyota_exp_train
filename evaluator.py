@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# =====================================
-# @Time    : 2020/9/1
-# @Author  : Yang Guan (Tsinghua Univ.)
-# @FileName: evaluator.py
-# =====================================
-
 import logging
 import os
 
@@ -107,8 +101,8 @@ class Evaluator(object):
         return info_dict
 
     def run_n_episode(self, n):
-        list_of_return = []
-        list_of_len = []
+        # list_of_return = []
+        # list_of_len = []
         list_of_info_dict = []
         for _ in range(n):
             # logger.info('logging {}-th episode'.format(_))
