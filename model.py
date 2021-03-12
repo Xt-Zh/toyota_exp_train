@@ -41,3 +41,9 @@ class MLPNet(Model):
         x = self.outputs(x)
         return x
 
+if __name__ == '__main__':
+    a=MLPNet(3,2,10,'tanh',1,name='x')
+    x=tf.random.normal((5,3))
+    print(x)
+    y=a(x)
+    print(y)

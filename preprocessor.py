@@ -122,14 +122,6 @@ class Preprocessor(object):
         else:
             return obses
 
-    def np_process_rewards(self, rewards):
-        if self.rew_ptype == 'normalize':
-            rewards = np.clip(rewards / np.sqrt(self.ret_rms.var + self.epsilon), -self.cliprew, self.cliprew)
-            return rewards
-        elif self.rew_ptype == 'scale':
-            return (rewards + self.rew_shift) * self.rew_scale
-        else:
-            return rewards
 
     def tf_process_obses(self, obses):
         with tf.name_scope('obs_process') as scope:
@@ -145,18 +137,6 @@ class Preprocessor(object):
             else:
                 return tf.convert_to_tensor(obses, dtype=tf.float32)
 
-    def tf_process_rewards(self, rewards):
-        with tf.name_scope('reward_process') as scope:
-            if self.rew_ptype == 'normalize':
-                rewards = tf.clip_by_value(rewards / tf.sqrt(self.ret_rms.tf_var + tf.constant(self.epsilon)),
-                                           -self.cliprew,
-                                           self.cliprew)
-                return rewards
-            elif self.rew_ptype == 'scale':
-                return (rewards+tf.convert_to_tensor(self.rew_shift, dtype=tf.float32)) \
-                       * tf.convert_to_tensor(self.rew_scale, dtype=tf.float32)
-            else:
-                return tf.convert_to_tensor(rewards, dtype=tf.float32)
 
     def set_params(self, params):
         if self.ob_rms:

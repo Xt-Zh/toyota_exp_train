@@ -108,8 +108,8 @@ def built_LMAMPC_parser():
     # policy and model
     parser.add_argument('--value_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_model_cls', type=str, default='MLP')
-    parser.add_argument('--policy_lr_schedule', type=list, default=[1e-2, 100000, 1e-5])
-    parser.add_argument('--value_lr_schedule', type=list, default=[5e-2, 100000, 1e-5])
+    parser.add_argument('--policy_lr_schedule', type=list, default=[1e-4, 100000, 1e-5])
+    parser.add_argument('--value_lr_schedule', type=list, default=[5e-4, 100000, 1e-5])
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--num_hidden_units', type=int, default=256)
     parser.add_argument('--hidden_activation', type=str, default='elu')
@@ -127,9 +127,9 @@ def built_LMAMPC_parser():
     # optimizer (PABAL)
     parser.add_argument('--max_sampled_steps', type=int, default=0)
     parser.add_argument('--max_iter', type=int, default=500100)
-    parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--num_learners', type=int, default=4)
-    parser.add_argument('--num_buffers', type=int, default=1)
+    parser.add_argument('--num_workers', type=int, default=2)
+    parser.add_argument('--num_learners', type=int, default=2)
+    parser.add_argument('--num_buffers', type=int, default=2)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=30)
     parser.add_argument('--eval_interval', type=int, default=50)
@@ -153,11 +153,7 @@ def built_parser():
     env = gym.make(args.env_id, **args2envkwargs(args))
     obs_space, act_space = env.observation_space, env.action_space
     args.obs_dim, args.act_dim = obs_space.shape[0], act_space.shape[0]
-    # args.obs_scale = [0.2, 1., 2., 1 / 50., 1 / 50, 1 / 180.] + \
-    #                  [1., 1 / 15., 0.2] + \
-    #                  [1., 1., 1 / 15.] * args.env_kwargs_num_future_data + \
-    #                  [1 / 50., 1 / 50., 0.2, 1 / 180.] * env.veh_num
-    args.obs_scale = [0.1, 0.1]
+    args.obs_scale = [1, 1]
     return args
 
 def main():

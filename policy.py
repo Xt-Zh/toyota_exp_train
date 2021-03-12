@@ -61,7 +61,7 @@ class ActorCritic4Braking(tf.Module):
         actor_len = len(self.actor.trainable_weights)
         critic_len = len(self.critic.trainable_weights)
         actor_grad, critic_grad = grads[:actor_len], grads[critic_len:]
-        # self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_weights))
+        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_weights))
         self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_weights))
 
     @tf.function

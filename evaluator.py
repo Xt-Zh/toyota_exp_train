@@ -124,6 +124,7 @@ class Evaluator(object):
                 self.writer.flush()
         if self.eval_times % self.args.eval_log_interval == 0:
             logger.info('Evaluator_info: {}, {}'.format(self.get_stats(), n_info_dict))
+        #     print(f"\033[1;30;43mEvaluator_time:{self.eval_times:d}\033[0m")
         self.eval_times += 1
 
     # 绘图
