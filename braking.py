@@ -68,6 +68,7 @@ class MyBrakingLearner(object):
         safe_info = np.ones([start_obses.shape[0], 1])
         gamma = 0.9
         discount = 1.0
+        # TODO: 把每步时间改成0.05
         for step in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
             actions, _ = self.actor_critic.compute_action(processed_obses)
@@ -75,9 +76,9 @@ class MyBrakingLearner(object):
             safe_info = self.model.judge_safety()
             critic_target += discount * rewards
             discount *= gamma
-        value = discount * self.actor_critic.compute_value(obses)
-        critic_target += value  # critic_target if absorbing, do not add v(s')
-        actor_loss = self.tf.reduce_mean(critic_target)  # 目的是最小\sum l(x,u)+V
+        critic_target += discount * self.actor_critic.compute_value(obses)
+        actor_loss = self.tf.reduce_mean(critic_target)  # 目的是最小化\sum l(x,u)+V
+
         critic_target = critic_target.numpy()
         critic_target[safe_info == 0] = self.model.reward_absorb
         critic_loss = critic_target - self.actor_critic.compute_value(start_obses)

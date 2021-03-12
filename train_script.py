@@ -69,8 +69,8 @@ def built_LMAMPC_parser():
     parser.add_argument('--worker_type', type=str, default='OffPolicyWorker')
     parser.add_argument('--evaluator_type', type=str, default='Evaluator')
     parser.add_argument('--buffer_type', type=str, default='normal')
-    # parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
-    parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
+    parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
+    # parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
     parser.add_argument('--off_policy', type=str, default=True)
 
     # env
@@ -90,7 +90,7 @@ def built_LMAMPC_parser():
 
     # worker
     parser.add_argument('--batch_size', type=int, default=512)
-    parser.add_argument('--worker_log_interval', type=int, default=5)
+    parser.add_argument('--worker_log_interval', type=int, default=10)
     parser.add_argument('--explore_sigma', type=float, default=None)
 
     # buffer
@@ -132,13 +132,13 @@ def built_LMAMPC_parser():
     parser.add_argument('--num_buffers', type=int, default=2)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=30)
-    parser.add_argument('--eval_interval', type=int, default=50)
+    parser.add_argument('--eval_interval', type=int, default=1)
     parser.add_argument('--save_interval', type=int, default=100)
-    parser.add_argument('--log_interval', type=int, default=50)
+    parser.add_argument('--log_interval', type=int, default=1)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    results_dir = './results/toyota3lane/experiment-{time}'.format(time=time_now)
+    results_dir = './results/toyota3lane/{time}'.format(time=time_now)
     parser.add_argument('--result_dir', type=str, default=results_dir)
     parser.add_argument('--log_dir', type=str, default=results_dir + '/logs')
     parser.add_argument('--model_dir', type=str, default=results_dir + '/models')
