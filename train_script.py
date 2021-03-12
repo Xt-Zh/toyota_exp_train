@@ -18,10 +18,10 @@ import ray
 
 from buffer import ReplayBuffer
 from evaluator import Evaluator
-from learners.ampc_lag import LMAMPCLearner2
+# from learners.ampc_lag import LMAMPCLearner2
 from learners.braking import MyBrakingLearner
 from optimizer import OffPolicyAsyncOptimizer, SingleProcessOffPolicyOptimizer
-from policy import Policy4Toyota, Policy4Lagrange, ActorCritic4Braking
+from policy import ActorCritic4Braking
 from tester import Tester
 from trainer import Trainer
 from worker import OffPolicyWorker
@@ -32,16 +32,12 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 NAME2WORKERCLS = dict([('OffPolicyWorker', OffPolicyWorker)])
-NAME2LEARNERCLS = dict([('LMAMPC-v2', LMAMPCLearner2),
-                        ('MyBrakingLearner', MyBrakingLearner)])
+NAME2LEARNERCLS = dict([('MyBrakingLearner', MyBrakingLearner)])
 NAME2BUFFERCLS = dict([('normal', ReplayBuffer), ('None', None)])
 NAME2OPTIMIZERCLS = dict([('OffPolicyAsync', OffPolicyAsyncOptimizer),
                           ('SingleProcessOffPolicy', SingleProcessOffPolicyOptimizer)])
-NAME2POLICIES = dict([('Policy4Toyota', Policy4Toyota),
-                      ('Policy4Lagrange', Policy4Lagrange),
-                      ('ActorCritic4Braking', ActorCritic4Braking)])
+NAME2POLICIES = dict([('ActorCritic4Braking', ActorCritic4Braking)])
 NAME2EVALUATORS = dict([('Evaluator', Evaluator), ('None', None)])
 
 def built_LMAMPC_parser():
@@ -67,17 +63,14 @@ def built_LMAMPC_parser():
 
     parser.add_argument('--memo', type=str, default='change envs') # mu dim 32, back to adam, add mu update interval
 
-    # parser.add_argument('--env_version', type=str, default='1d2b82d2')
-    # parser.add_argument('--train_version', type=str, default='76f7d2b4')
-
 
     # trainer
     parser.add_argument('--policy_type', type=str, default='ActorCritic4Braking') #策略类名称
     parser.add_argument('--worker_type', type=str, default='OffPolicyWorker')
     parser.add_argument('--evaluator_type', type=str, default='Evaluator')
     parser.add_argument('--buffer_type', type=str, default='normal')
-    # parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
-    parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
+    parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
+    # parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
     parser.add_argument('--off_policy', type=str, default=True)
 
     # env
@@ -165,21 +158,20 @@ def built_LMAMPC_parser():
 
     return parser.parse_args()
 
-def built_parser(alg_name):
-    if alg_name == 'LMAMPC' or 'LMAMPC-v2':
-        args = built_LMAMPC_parser()
-        env = gym.make(args.env_id, **args2envkwargs(args))
-        obs_space, act_space = env.observation_space, env.action_space
-        args.obs_dim, args.act_dim = obs_space.shape[0], act_space.shape[0]
-        # args.obs_scale = [0.2, 1., 2., 1 / 50., 1 / 50, 1 / 180.] + \
-        #                  [1., 1 / 15., 0.2] + \
-        #                  [1., 1., 1 / 15.] * args.env_kwargs_num_future_data + \
-        #                  [1 / 50., 1 / 50., 0.2, 1 / 180.] * env.veh_num
-        args.obs_scale = [0.1, 0.1]
-        return args
+def built_parser():
+    args = built_LMAMPC_parser()
+    env = gym.make(args.env_id, **args2envkwargs(args))
+    obs_space, act_space = env.observation_space, env.action_space
+    args.obs_dim, args.act_dim = obs_space.shape[0], act_space.shape[0]
+    # args.obs_scale = [0.2, 1., 2., 1 / 50., 1 / 50, 1 / 180.] + \
+    #                  [1., 1 / 15., 0.2] + \
+    #                  [1., 1., 1 / 15.] * args.env_kwargs_num_future_data + \
+    #                  [1 / 50., 1 / 50., 0.2, 1 / 180.] * env.veh_num
+    args.obs_scale = [0.1, 0.1]
+    return args
 
-def main(alg_name):
-    args = built_parser(alg_name)
+def main():
+    args = built_parser()
     logger.info('begin training agents with parameter {}'.format(str(args)))
     if args.mode == 'training':
         ray.init()
@@ -213,4 +205,4 @@ def main(alg_name):
 
 
 if __name__ == '__main__':
-    main('LMAMPC-v2')
+    main()

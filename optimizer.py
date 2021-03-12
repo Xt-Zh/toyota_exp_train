@@ -107,7 +107,8 @@ class UpdateThread(threading.Thread):
                 self.evaluator.set_ppc_params.remote(self.local_worker.get_ppc_params())
             self.evaluator.run_evaluation.remote(self.iteration)
             # 添加绘图命令
-            self.evaluator.static_region.remote()
+            self.evaluator.plot_critic.remote()
+            self.evaluator.plot_actor.remote()
 
         # save
         if self.iteration % self.args.save_interval == 0:
@@ -250,18 +251,8 @@ class OffPolicyAsyncOptimizer(object):
             for learner, objID in self.learn_tasks.completed():
                 grads = ray.get(objID)
                 learner_stats = ray.get(learner.get_stats.remote())
-                # self.args.buffer_type 默认值为 normal
-                # if self.args.buffer_type == 'priority':
-                #     info_for_buffer = ray.get(learner.get_info_for_buffer.remote())
-                #     info_for_buffer['rb'].update_priorities.remote(info_for_buffer['indexes'],
-                #                                                    info_for_buffer['td_error'])
                 rb, samples = self.learner_queue.get(block=False)
 
-                # self.args.obs_preprocess_type 默认值为 scale
-                # if ppc_params and \
-                #         (self.args.obs_preprocess_type == 'normalize' or self.args.reward_preprocess_type == 'normalize'):
-                #     learner.set_ppc_params.remote(ppc_params)
-                #     self.local_worker.set_ppc_params(ppc_params)
                 if weights is None:
                     weights = ray.put(self.local_worker.get_weights())
                 learner.set_weights.remote(weights)
@@ -315,10 +306,10 @@ class SingleProcessOffPolicyOptimizer(object):
     def get_stats(self):
         self.stats.update(dict(num_sampled_steps=self.num_sampled_steps,
                                iteration=self.iteration,
-                               sampling_time=self.timers['sampling_timer'].mean,
-                               replay_time=self.timers["replay_timer"].mean,
-                               learning_time=self.timers['learning_timer'].mean,
-                               grad_apply_timer=self.timers['grad_apply_timer'].mean
+                               # sampling_time=self.timers['sampling_timer'].mean,
+                               # replay_time=self.timers["replay_timer"].mean,
+                               # learning_time=self.timers['learning_timer'].mean,
+                               # grad_apply_timer=self.timers['grad_apply_timer'].mean
                                )
                           )
         return self.stats
@@ -381,7 +372,8 @@ class SingleProcessOffPolicyOptimizer(object):
             self.evaluator.set_ppc_params(self.worker.get_ppc_params())
             self.evaluator.run_evaluation(self.iteration)
             #添加绘图命令
-            self.evaluator.static_region()
+            self.evaluator.plot_critic()
+            self.evaluator.plot_actor()
 
         # save
         if self.iteration % self.args.save_interval == 0:

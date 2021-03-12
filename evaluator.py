@@ -10,6 +10,9 @@ import numpy as np
 from preprocessor import Preprocessor
 from utils.misc import TimerStat, args2envkwargs
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -88,10 +91,6 @@ class Evaluator(object):
         episode_return = sum(reward_list)
         episode_len = len(reward_list)
         info_dict = dict()
-        # import matplotlib.pyplot as plt
-        # plt.figure(1)
-        # plt.plot(range(len(action_list)), action_list)
-        # plt.show()
         for key in reward_info_dict_list[0].keys():
             info_key = list(map(lambda x: x[key], reward_info_dict_list))
             mean_key = sum(info_key) / len(info_key)
@@ -128,8 +127,8 @@ class Evaluator(object):
             with self.writer.as_default():
                 for key, val in n_info_dict.items():
                     self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
-                for key, val in self.get_stats().items():
-                    self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
+                # for key, val in self.get_stats().items():
+                #     self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
                 self.writer.flush()
         if self.eval_times % self.args.eval_log_interval == 0:
             logger.info('Evaluator_info: {}, {}'.format(self.get_stats(),n_info_dict))
@@ -137,9 +136,9 @@ class Evaluator(object):
 
     #TODO: 绘图
 
-    def static_region(self):
-        d = np.linspace(-10,10,100)
-        v = np.linspace(-10,10,100)
+    def plot_critic(self):
+        d = np.linspace(-0,10,100)
+        v = np.linspace(-0,10,100)
 
         D, V = np.meshgrid(d, v)
         flattenD = np.reshape(D, [-1,])
@@ -147,19 +146,16 @@ class Evaluator(object):
         obses = np.stack([flattenD, flattenV], 1)
         preprocess_obs = self.preprocessor.np_process_obses(obses)
         flatten_value = self.policy_with_value.compute_value(preprocess_obs).numpy()
-        # flattenMU_max = np.max(flattenMU,axis=1)
         for k in range(flatten_value.shape[1]):
             flatten_value_k = flatten_value[:, k]
             critic = flatten_value_k.reshape(D.shape)
             def plot_region(z, name):
-                import matplotlib.pyplot as plt
-                from mpl_toolkits.mplot3d import Axes3D
                 plt.figure()
                 plt.contourf(D,V,z,50,cmap='rainbow')
                 plt.grid()
-                # plt.plot(d, np.sqrt(2*5*d),lw=2)
                 name_2d=name + '_2d.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_2d))
+                plt.close()
 
                 figure = plt.figure()
                 ax = Axes3D(figure)
@@ -167,4 +163,37 @@ class Evaluator(object):
                 # plt.show()
                 name_3d = name + '_3d.jpg'
                 plt.savefig(os.path.join(self.log_dir,name_3d))
-            plot_region(critic, str(k))
+                plt.close()
+            plot_region(critic, name=f"critic_{k:d}")
+
+    def plot_actor(self):
+        d = np.linspace(-0, 10, 100)
+        v = np.linspace(-0, 10, 100)
+
+        D, V = np.meshgrid(d, v)
+        flattenD = np.reshape(D, [-1, ])
+        flattenV = np.reshape(V, [-1, ])
+        obses = np.stack([flattenD, flattenV], 1)
+        preprocess_obs = self.preprocessor.np_process_obses(obses)
+        flatten_value = self.policy_with_value.compute_action(preprocess_obs)[0].numpy()
+
+        for k in range(flatten_value.shape[1]):
+            flatten_value_k = flatten_value[:, k]
+            actor = flatten_value_k.reshape(D.shape)
+            def plot_region(z, name):
+
+                plt.figure()
+                plt.contourf(D,V,z,50,cmap='rainbow')
+                plt.grid()
+                name_2d=name + '_2d.jpg'
+                plt.savefig(os.path.join(self.log_dir, name_2d))
+                plt.close()
+
+                figure = plt.figure()
+                ax = Axes3D(figure)
+                ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
+                # plt.show()
+                name_3d = name + '_3d.jpg'
+                plt.savefig(os.path.join(self.log_dir,name_3d))
+                plt.close()
+            plot_region(actor, name=f"actor_{k:d}")
