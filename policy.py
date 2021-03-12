@@ -33,7 +33,7 @@ class ActorCritic4Braking(tf.Module):
 
         # 定义critic
         self.critic = policy_model_cls(obs_dim, n_hiddens, n_units, hidden_activation, act_dim * 2, name='critic')
-        critic_lr_schedule = PolynomialDecay(*self.args.policy_lr_schedule)
+        critic_lr_schedule = PolynomialDecay(*self.args.value_lr_schedule)
         self.critic_optimizer = self.tf.keras.optimizers.Adam(critic_lr_schedule, name='adam_opt')
 
         # 组合起来
@@ -56,12 +56,12 @@ class ActorCritic4Braking(tf.Module):
         for i, weight in enumerate(weights):
             self.models[i].set_weights(weight)
 
-    # @tf.function
+    @tf.function
     def apply_gradients(self, iteration, grads):
         actor_len = len(self.actor.trainable_weights)
         critic_len = len(self.critic.trainable_weights)
         actor_grad, critic_grad = grads[:actor_len], grads[critic_len:]
-        self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_weights))
+        # self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_weights))
         self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_weights))
 
     @tf.function

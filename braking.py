@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# =====================================
-# @Time    : 2020/9/1
-# @Author  : z
-# @FileName: ampc.py
-# =====================================
-
 import logging
 
 import numpy as np
@@ -56,12 +50,7 @@ class MyBrakingLearner(object):
         return self.info_for_buffer
 
     def get_batch_data(self, batch_data):
-        self.batch_data = {'batch_obs': batch_data[0].astype(np.float32), #只需要这一个就可以了，下面的都不用
-                           'batch_actions': batch_data[1].astype(np.float32),
-                           'batch_rewards': batch_data[2].astype(np.float32),
-                           'batch_obs_tp1': batch_data[3].astype(np.float32),
-                           'batch_dones': batch_data[4].astype(np.float32)
-                           }
+        self.batch_data = {'batch_obs': batch_data[0].astype(np.float32),}
 
     def get_weights(self):
         return self.actor_critic.get_weights()
@@ -77,17 +66,20 @@ class MyBrakingLearner(object):
         obses = start_obses
         critic_target = self.tf.zeros([start_obses.shape[0], 1])
         safe_info = np.ones([start_obses.shape[0], 1])
+        gamma = 0.9
+        discount = 1.0
         for step in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
             actions, _ = self.actor_critic.compute_action(processed_obses)
-            obses, rewards = self.model.rollout_out(actions)  # todo: rewards add absorbing
-            safe_info=self.model.judge_safety()
-            critic_target += rewards  #TODO:加吸收态
-        value = self.actor_critic.compute_value(obses)
-        critic_target += value  # todo: critic_target if absorbing, do not add v(s')
-        actor_loss = -self.tf.reduce_mean(critic_target) #目的是最大化\sum l(x,u)+V，也就是最小化它的负值
+            obses, rewards = self.model.rollout_out(actions)  # rewards add absorbing
+            safe_info = self.model.judge_safety()
+            critic_target += discount * rewards
+            discount *= gamma
+        value = discount * self.actor_critic.compute_value(obses)
+        critic_target += value  # critic_target if absorbing, do not add v(s')
+        actor_loss = self.tf.reduce_mean(critic_target)  # 目的是最小\sum l(x,u)+V
         critic_target = critic_target.numpy()
-        critic_target[safe_info==0]=self.model.reward_absorb
+        critic_target[safe_info == 0] = self.model.reward_absorb
         critic_loss = critic_target - self.actor_critic.compute_value(start_obses)
         critic_loss = self.tf.reduce_mean(self.tf.square(critic_loss) / 2)
 

@@ -6,12 +6,13 @@
 # @Author  : Yang Guan (Tsinghua Univ.)
 # @FileName: train_script.py
 # =====================================
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import argparse
 import datetime
 import json
 import logging
-import os
 import gym
 
 import ray
@@ -19,17 +20,16 @@ import ray
 from buffer import ReplayBuffer
 from evaluator import Evaluator
 # from learners.ampc_lag import LMAMPCLearner2
-from learners.braking import MyBrakingLearner
+from braking import MyBrakingLearner
 from optimizer import OffPolicyAsyncOptimizer, SingleProcessOffPolicyOptimizer
 from policy import ActorCritic4Braking
 from tester import Tester
 from trainer import Trainer
 from worker import OffPolicyWorker
-from utils.misc import TimerStat, args2envkwargs
+from utils.misc import args2envkwargs
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 
 NAME2WORKERCLS = dict([('OffPolicyWorker', OffPolicyWorker)])
@@ -69,14 +69,14 @@ def built_LMAMPC_parser():
     parser.add_argument('--worker_type', type=str, default='OffPolicyWorker')
     parser.add_argument('--evaluator_type', type=str, default='Evaluator')
     parser.add_argument('--buffer_type', type=str, default='normal')
-    parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
-    # parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
+    # parser.add_argument('--optimizer_type', type=str, default='SingleProcessOffPolicy')
+    parser.add_argument('--optimizer_type', type=str, default='OffPolicyAsync')
     parser.add_argument('--off_policy', type=str, default=True)
 
     # env
     parser.add_argument('--env_id', default='EmergencyBrake-v0')
-    parser.add_argument('--env_kwargs_num_future_data', type=int, default=0)
-    parser.add_argument('--env_kwargs_training_task', type=str, default='left')
+    # parser.add_argument('--env_kwargs_num_future_data', type=int, default=0)
+    # parser.add_argument('--env_kwargs_training_task', type=str, default='left')
     parser.add_argument('--obs_dim', default=None)
     parser.add_argument('--act_dim', default=None)
     parser.add_argument('--con_dim', type=int, default=10)
@@ -87,10 +87,6 @@ def built_LMAMPC_parser():
     parser.add_argument('--num_rollout_list_for_policy_update', type=list, default=[10])
     parser.add_argument('--gamma', type=float, default=1.)
     parser.add_argument('--gradient_clip_norm', type=float, default=10)
-    parser.add_argument('--init_punish_factor', type=float, default=10.)
-    parser.add_argument('--pf_enlarge_interval', type=int, default=20000)
-    parser.add_argument('--pf_amplifier', type=float, default=1.)
-    parser.add_argument('--mu_clip_value', type=float, default=100)
 
     # worker
     parser.add_argument('--batch_size', type=int, default=512)
@@ -101,31 +97,25 @@ def built_LMAMPC_parser():
     parser.add_argument('--max_buffer_size', type=int, default=50000)
     parser.add_argument('--replay_starts', type=int, default=3000)
     parser.add_argument('--replay_batch_size', type=int, default=256)
-    parser.add_argument('--replay_alpha', type=float, default=0.6)
-    parser.add_argument('--replay_beta', type=float, default=0.4)
     parser.add_argument('--buffer_log_interval', type=int, default=40000)
 
     # tester and evaluator
-    parser.add_argument('--num_eval_episode', type=int, default=2)
+    parser.add_argument('--num_eval_episode', type=int, default=1)
     parser.add_argument('--eval_log_interval', type=int, default=1)
     parser.add_argument('--fixed_steps', type=int, default=50)
-    parser.add_argument('--eval_render', type=bool, default=True)
+    parser.add_argument('--eval_render', type=bool, default=False) #是否显示评估过程中的图像
 
     # policy and model
     parser.add_argument('--value_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_model_cls', type=str, default='MLP')
-    parser.add_argument('--mu_model_cls', type=str, default='MLP')
-    parser.add_argument('--policy_lr_schedule', type=list, default=[3e-4, 100000, 1e-5])
-    parser.add_argument('--value_lr_schedule', type=list, default=[8e-4, 100000, 1e-5])
-    parser.add_argument('--mu_lr_schedule', type=list, default=[3e-6, 100000, 1e-6])
+    parser.add_argument('--policy_lr_schedule', type=list, default=[1e-2, 100000, 1e-5])
+    parser.add_argument('--value_lr_schedule', type=list, default=[5e-2, 100000, 1e-5])
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--num_hidden_units', type=int, default=256)
     parser.add_argument('--hidden_activation', type=str, default='elu')
     parser.add_argument('--deterministic_policy', default=True, action='store_true')
     parser.add_argument('--policy_out_activation', type=str, default='tanh')
-    parser.add_argument('--mu_out_activation', type=str, default='relu')
     parser.add_argument('--action_range', type=float, default=None)
-    parser.add_argument('--mu_update_interval', type=int, default=20)
 
     # preprocessor
     parser.add_argument('--obs_preprocess_type', type=str, default='scale')
@@ -138,13 +128,13 @@ def built_LMAMPC_parser():
     parser.add_argument('--max_sampled_steps', type=int, default=0)
     parser.add_argument('--max_iter', type=int, default=500100)
     parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--num_learners', type=int, default=5)
+    parser.add_argument('--num_learners', type=int, default=4)
     parser.add_argument('--num_buffers', type=int, default=1)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=30)
-    parser.add_argument('--eval_interval', type=int, default=100)
-    parser.add_argument('--save_interval', type=int, default=200)
-    parser.add_argument('--log_interval', type=int, default=100)
+    parser.add_argument('--eval_interval', type=int, default=50)
+    parser.add_argument('--save_interval', type=int, default=100)
+    parser.add_argument('--log_interval', type=int, default=50)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")

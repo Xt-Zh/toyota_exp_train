@@ -288,10 +288,6 @@ class SingleProcessOffPolicyOptimizer(object):
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
 
-        self.args.log_interval = 50
-        self.args.eval_interval = 100 # 画图间隔
-        self.args.save_interval = 100
-
         # fill buffer to replay starts
         logger.info('start filling the replay')
         while not len(self.replay_buffer) >= self.args.replay_starts:
@@ -306,10 +302,6 @@ class SingleProcessOffPolicyOptimizer(object):
     def get_stats(self):
         self.stats.update(dict(num_sampled_steps=self.num_sampled_steps,
                                iteration=self.iteration,
-                               # sampling_time=self.timers['sampling_timer'].mean,
-                               # replay_time=self.timers["replay_timer"].mean,
-                               # learning_time=self.timers['learning_timer'].mean,
-                               # grad_apply_timer=self.timers['grad_apply_timer'].mean
                                )
                           )
         return self.stats

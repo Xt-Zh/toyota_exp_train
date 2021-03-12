@@ -5,18 +5,15 @@ import logging
 import os
 
 import gym
+import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 
 from preprocessor import Preprocessor
 from utils.misc import TimerStat, args2envkwargs
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-render_or_not = False #TODO: 是否绘制gym环境
 
 
 class Evaluator(object):
@@ -36,7 +33,7 @@ class Evaluator(object):
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        self.preprocessor = Preprocessor((self.args.obs_dim, ),
+        self.preprocessor = Preprocessor((self.args.obs_dim,),
                                          self.args.obs_preprocess_type,
                                          self.args.reward_preprocess_type,
                                          self.args.obs_scale,
@@ -64,7 +61,7 @@ class Evaluator(object):
         self.load_ppc_params(ppc_params_load_dir)
 
     def run_an_episode(self, steps=None, render=True):
-        render=render_or_not
+        # render=render_or_not
         reward_list = []
         reward_info_dict_list = []
         action_list = []
@@ -100,11 +97,8 @@ class Evaluator(object):
         return info_dict
 
     def run_n_episode(self, n):
-        # list_of_return = []
-        # list_of_len = []
         list_of_info_dict = []
         for _ in range(n):
-            # logger.info('logging {}-th episode'.format(_))
             info_dict = self.run_an_episode(self.args.fixed_steps, self.args.eval_render)
             list_of_info_dict.append(info_dict.copy())
         n_info_dict = dict()
@@ -127,33 +121,32 @@ class Evaluator(object):
             with self.writer.as_default():
                 for key, val in n_info_dict.items():
                     self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
-                # for key, val in self.get_stats().items():
-                #     self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
                 self.writer.flush()
         if self.eval_times % self.args.eval_log_interval == 0:
-            logger.info('Evaluator_info: {}, {}'.format(self.get_stats(),n_info_dict))
+            logger.info('Evaluator_info: {}, {}'.format(self.get_stats(), n_info_dict))
         self.eval_times += 1
 
-    #TODO: 绘图
+    # 绘图
 
     def plot_critic(self):
-        d = np.linspace(-0,10,100)
-        v = np.linspace(-0,10,100)
+        d = np.linspace(-0, 10, 100)
+        v = np.linspace(-0, 10, 100)
 
         D, V = np.meshgrid(d, v)
-        flattenD = np.reshape(D, [-1,])
-        flattenV = np.reshape(V, [-1,])
+        flattenD = np.reshape(D, [-1, ])
+        flattenV = np.reshape(V, [-1, ])
         obses = np.stack([flattenD, flattenV], 1)
         preprocess_obs = self.preprocessor.np_process_obses(obses)
         flatten_value = self.policy_with_value.compute_value(preprocess_obs).numpy()
         for k in range(flatten_value.shape[1]):
             flatten_value_k = flatten_value[:, k]
             critic = flatten_value_k.reshape(D.shape)
+
             def plot_region(z, name):
                 plt.figure()
-                plt.contourf(D,V,z,50,cmap='rainbow')
+                plt.contourf(D, V, z, 50, cmap='rainbow')
                 plt.grid()
-                name_2d=name + '_2d.jpg'
+                name_2d = name + '_2d.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_2d))
                 plt.close()
 
@@ -162,8 +155,9 @@ class Evaluator(object):
                 ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
                 # plt.show()
                 name_3d = name + '_3d.jpg'
-                plt.savefig(os.path.join(self.log_dir,name_3d))
+                plt.savefig(os.path.join(self.log_dir, name_3d))
                 plt.close()
+
             plot_region(critic, name=f"critic_{k:d}")
 
     def plot_actor(self):
@@ -180,12 +174,12 @@ class Evaluator(object):
         for k in range(flatten_value.shape[1]):
             flatten_value_k = flatten_value[:, k]
             actor = flatten_value_k.reshape(D.shape)
-            def plot_region(z, name):
 
+            def plot_region(z, name):
                 plt.figure()
-                plt.contourf(D,V,z,50,cmap='rainbow')
+                plt.contourf(D, V, z, 50, cmap='rainbow')
                 plt.grid()
-                name_2d=name + '_2d.jpg'
+                name_2d = name + '_2d.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_2d))
                 plt.close()
 
@@ -194,6 +188,7 @@ class Evaluator(object):
                 ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
                 # plt.show()
                 name_3d = name + '_3d.jpg'
-                plt.savefig(os.path.join(self.log_dir,name_3d))
+                plt.savefig(os.path.join(self.log_dir, name_3d))
                 plt.close()
+
             plot_region(actor, name=f"actor_{k:d}")
