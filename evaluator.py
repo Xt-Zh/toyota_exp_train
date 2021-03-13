@@ -148,7 +148,10 @@ class Evaluator(object):
                 plt.figure()
                 plt.contourf(D, V, z, 50, cmap='rainbow')
                 plt.grid()
-                name_2d = name + '_2d.jpg'
+                # name_2d = name + '_2d.jpg'
+                if not os.path.exists(os.path.join(self.log_dir,'critic')):
+                    os.mkdir(os.path.join(self.log_dir,'critic'))
+                name_2d = 'critic/2d_'+name+'.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_2d))
                 plt.close()
 
@@ -156,11 +159,12 @@ class Evaluator(object):
                 ax = Axes3D(figure)
                 ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
                 # plt.show()
-                name_3d = name + '_3d.jpg'
+                # name_3d = name + '_3d.jpg'
+                name_3d = 'critic/3d_' + name + '.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_3d))
                 plt.close()
 
-            plot_region(critic, name=f"critic_{k:d}")
+            plot_region(critic, name=f"critic_{self.iteration:d}")
 
     def plot_actor(self):
         d = np.linspace(-0, 10, 100)
@@ -181,7 +185,10 @@ class Evaluator(object):
                 plt.figure()
                 plt.contourf(D, V, z, 50, cmap='rainbow')
                 plt.grid()
-                name_2d = name + '_2d.jpg'
+                # name_2d = name + '_2d.jpg'
+                if not os.path.exists(os.path.join(self.log_dir,'actor')):
+                    os.mkdir(os.path.join(self.log_dir,'actor'))
+                name_2d = 'actor/2d_'+name+'.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_2d))
                 plt.close()
 
@@ -189,8 +196,9 @@ class Evaluator(object):
                 ax = Axes3D(figure)
                 ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
                 # plt.show()
-                name_3d = name + '_3d.jpg'
+                # name_3d = name + '_3d.jpg'
+                name_3d = 'actor/3d_' + name + '.jpg'
                 plt.savefig(os.path.join(self.log_dir, name_3d))
                 plt.close()
 
-            plot_region(actor, name=f"actor_{k:d}")
+            plot_region(actor, name=f"actor_{self.iteration:d}")
