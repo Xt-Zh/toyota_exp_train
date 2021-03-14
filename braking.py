@@ -50,7 +50,7 @@ class MyBrakingLearner(object):
         return self.info_for_buffer
 
     def get_batch_data(self, batch_data):
-        self.batch_data = {'batch_obs': batch_data[0].astype(np.float32),}
+        self.batch_data = {'batch_obs': batch_data[0].astype(np.float32), }
 
     def get_weights(self):
         return self.actor_critic.get_weights()
@@ -79,13 +79,16 @@ class MyBrakingLearner(object):
         critic_target += discount * self.actor_critic.compute_value(obses)
         actor_loss = self.tf.reduce_mean(critic_target)  # 目的是最小化\sum l(x,u)+V
 
-        critic_target = critic_target.numpy()
-        critic_target[safe_info == 0] = self.model.reward_absorb
-        critic_loss = critic_target - self.actor_critic.compute_value(start_obses)
+        # critic_target = critic_target.numpy()
+        critic_target = self.tf.where(safe_info == 0, self.tf.ones_like(critic_target) * self.model.reward_absorb,
+                                      critic_target)
+        # critic_target[safe_info == 0] = self.model.reward_absorb
+        critic_loss = self.tf.stop_gradient(critic_target) - self.actor_critic.compute_value(start_obses)
         critic_loss = self.tf.reduce_mean(self.tf.square(critic_loss) / 2)
 
         return actor_loss, critic_loss
 
+    @tf.function
     def forward_and_backward(self, mb_obs, ite):
         with self.tf.GradientTape(persistent=True) as tape:
             actor_loss, value_loss = self.model_rollout_for_update(mb_obs)
