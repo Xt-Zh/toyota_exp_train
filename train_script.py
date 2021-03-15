@@ -61,9 +61,6 @@ def built_LMAMPC_parser():
             parser.add_argument("-" + key, default=val)
         return parser.parse_args()
 
-    parser.add_argument('--memo', type=str, default='change envs') # mu dim 32, back to adam, add mu update interval
-
-
     # trainer
     parser.add_argument('--policy_type', type=str, default='ActorCritic4Braking') #策略类名称
     parser.add_argument('--worker_type', type=str, default='OffPolicyWorker')
@@ -90,7 +87,7 @@ def built_LMAMPC_parser():
 
     # worker
     parser.add_argument('--batch_size', type=int, default=512)
-    parser.add_argument('--worker_log_interval', type=int, default=50) #worker的log间隔
+    parser.add_argument('--worker_log_interval', type=int, default=100) #worker的log间隔
     parser.add_argument('--explore_sigma', type=float, default=None)
 
     # buffer
@@ -108,8 +105,8 @@ def built_LMAMPC_parser():
     # policy and model
     parser.add_argument('--value_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_model_cls', type=str, default='MLP')
-    parser.add_argument('--policy_lr_schedule', type=list, default=[5e-5, 500000, 1e-6]) # 学习率
-    parser.add_argument('--value_lr_schedule', type=list, default=[1e-4, 500000, 1e-6])
+    parser.add_argument('--policy_lr_schedule', type=list, default=[1e-4, 50000, 1e-5]) # 学习率
+    parser.add_argument('--value_lr_schedule', type=list, default=[1e-3, 50000, 1e-4])
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--num_hidden_units', type=int, default=256)
     parser.add_argument('--hidden_activation', type=str, default='elu')
@@ -132,9 +129,9 @@ def built_LMAMPC_parser():
     parser.add_argument('--num_buffers', type=int, default=1)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=30)
-    parser.add_argument('--eval_interval', type=int, default=50) #间隔
+    parser.add_argument('--eval_interval', type=int, default=5000) #间隔
     parser.add_argument('--save_interval', type=int, default=100)
-    parser.add_argument('--log_interval', type=int, default=100)
+    parser.add_argument('--log_interval', type=int, default=500)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")

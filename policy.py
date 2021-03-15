@@ -3,13 +3,12 @@
 
 
 import tensorflow as tf
-import numpy as np
-from gym import spaces
 from tensorflow.keras.optimizers.schedules import PolynomialDecay
 
 from model import MLPNet
 
-NAME2MODELCLS = dict([('MLP', MLPNet),])
+NAME2MODELCLS = dict([('MLP', MLPNet), ])
+
 
 class ActorCritic4Braking(tf.Module):
     import tensorflow as tf
@@ -27,7 +26,7 @@ class ActorCritic4Braking(tf.Module):
 
         # 定义actor
         self.actor = policy_model_cls(obs_dim, n_hiddens, n_units, hidden_activation, act_dim * 2, name='actor',
-                                       output_activation=self.args.policy_out_activation)
+                                      output_activation=self.args.policy_out_activation)
         actor_lr_schedule = PolynomialDecay(*self.args.policy_lr_schedule)
         self.actor_optimizer = self.tf.keras.optimizers.Adam(actor_lr_schedule, name='adam_opt')
 
@@ -38,20 +37,23 @@ class ActorCritic4Braking(tf.Module):
 
         # 组合起来
         self.models = (self.actor, self.critic)
-        self.optimizers = (self.actor_optimizer,self.critic_optimizer)
+        self.optimizers = (self.actor_optimizer, self.critic_optimizer)
 
     def save_weights(self, save_dir, iteration):
         model_pairs = [(model.name, model) for model in self.models]
         optimizer_pairs = [(optimizer._name, optimizer) for optimizer in self.optimizers]
         ckpt = self.tf.train.Checkpoint(**dict(model_pairs + optimizer_pairs))
         ckpt.save(save_dir + '/ckpt_ite' + str(iteration))
+
     def load_weights(self, load_dir, iteration):
         model_pairs = [(model.name, model) for model in self.models]
         optimizer_pairs = [(optimizer._name, optimizer) for optimizer in self.optimizers]
         ckpt = self.tf.train.Checkpoint(**dict(model_pairs + optimizer_pairs))
         ckpt.restore(load_dir + '/ckpt_ite' + str(iteration) + '-1')
+
     def get_weights(self):
         return [model.get_weights() for model in self.models]
+
     def set_weights(self, weights):
         for i, weight in enumerate(weights):
             self.models[i].set_weights(weight)
@@ -67,7 +69,7 @@ class ActorCritic4Braking(tf.Module):
     @tf.function
     def compute_mode(self, obs):
         logits = self.actor(obs)
-        mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1) #取前一半是为什么？
+        mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
         return mean
 
     @tf.function
@@ -78,6 +80,7 @@ class ActorCritic4Braking(tf.Module):
             mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
             return mean, 0.
 
+    @tf.function
     def compute_value(self, obs):
         with tf.name_scope("compute_value") as scope:
             logits = self.critic(obs)

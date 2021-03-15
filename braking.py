@@ -65,24 +65,24 @@ class MyBrakingLearner(object):
         self.model.reset(start_obses)
         obses = start_obses
         critic_target = self.tf.zeros([start_obses.shape[0], 1])
-        safe_info = np.ones([start_obses.shape[0], 1])
+        # safe_info = np.ones([start_obses.shape[0], 1])
         gamma = 0.9
         discount = 1.0
-        # TODO: 把每步时间改成0.05
         for step in range(self.num_rollout_list_for_policy_update[0]):
-            processed_obses = self.preprocessor.tf_process_obses(obses)
-            actions, _ = self.actor_critic.compute_action(processed_obses)
-            obses, rewards = self.model.rollout_out(actions)  # rewards add absorbing
-            safe_info = self.model.judge_safety()
+            # processed_obses = self.preprocessor.tf_process_obses(obses)
+            actions, _ = self.actor_critic.compute_action(obses)  # -1<=actions<=1
+            obses, rewards = self.model.rollout_out(actions)
             critic_target += discount * rewards
             discount *= gamma
+        # 在rollout的过程中和actor_loss的计算中都不采用罚函数吸收态，直接计算即可
         critic_target += discount * self.actor_critic.compute_value(obses)
         actor_loss = self.tf.reduce_mean(critic_target)  # 目的是最小化\sum l(x,u)+V
 
-        # critic_target = critic_target.numpy()
-        critic_target = self.tf.where(safe_info == 0, self.tf.ones_like(critic_target) * self.model.reward_absorb,
+        # 在计算critic_loss的时候将那些已经到达不安全状态的情况设置为吸收态值
+        safe_info = self.tf.expand_dims(self.model.judge_safety(), axis=1)  # 0为不安全，1为安全
+        critic_target = self.tf.where(safe_info == 0,
+                                      self.tf.ones_like(critic_target) * self.model.reward_absorb,
                                       critic_target)
-        # critic_target[safe_info == 0] = self.model.reward_absorb
         critic_loss = self.tf.stop_gradient(critic_target) - self.actor_critic.compute_value(start_obses)
         critic_loss = self.tf.reduce_mean(self.tf.square(critic_loss) / 2)
 
