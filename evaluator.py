@@ -133,20 +133,32 @@ class Evaluator(object):
     def plot_critic(self):
         d = np.linspace(-0, 10, 100)
         v = np.linspace(-0, 10, 100)
+        maxv=np.sqrt(2 * 5 * d)
 
         D, V = np.meshgrid(d, v)
         flattenD = np.reshape(D, [-1, ])
         flattenV = np.reshape(V, [-1, ])
+
         obses = np.stack([flattenD, flattenV], 1)
         preprocess_obs = self.preprocessor.np_process_obses(obses)
         flatten_value = self.policy_with_value.compute_value(preprocess_obs).numpy()
+
+        obses_max = np.vstack([d,maxv]).T
+        preprocess_obs_max = self.preprocessor.np_process_obses(obses_max)
+        flatten_value_max = self.policy_with_value.compute_value(preprocess_obs_max).numpy()
+
         for k in range(flatten_value.shape[1]):
             flatten_value_k = flatten_value[:, k]
             critic = flatten_value_k.reshape(D.shape)
 
+            flatten_value_max_k=flatten_value_max[:,k]
+            critic_max=flatten_value_max_k.reshape(-1)
+
             def plot_region(z, name):
                 plt.figure()
-                plt.contourf(D, V, z, 50, cmap='rainbow')
+                fig_plot=plt.contourf(D, V, z, 50, cmap='rainbow')
+                plt.plot(d, maxv, lw=2,color='k')
+                plt.colorbar(fig_plot)
                 plt.grid()
                 # name_2d = name + '_2d.jpg'
                 if not os.path.exists(os.path.join(self.log_dir,'critic')):
@@ -158,6 +170,7 @@ class Evaluator(object):
                 figure = plt.figure()
                 ax = Axes3D(figure)
                 ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
+                ax.plot(d,maxv,critic_max,lw=2,color='k')
                 # plt.show()
                 # name_3d = name + '_3d.jpg'
                 name_3d = 'critic/3d_' + name + '.jpg'
@@ -183,7 +196,9 @@ class Evaluator(object):
 
             def plot_region(z, name):
                 plt.figure()
-                plt.contourf(D, V, z, 50, cmap='rainbow')
+                fig_plot=plt.contourf(D, V, z, 50, cmap='rainbow')
+                plt.plot(d,np.sqrt(2 * 5 * d), lw=2,color='k')
+                plt.colorbar(fig_plot)
                 plt.grid()
                 # name_2d = name + '_2d.jpg'
                 if not os.path.exists(os.path.join(self.log_dir,'actor')):

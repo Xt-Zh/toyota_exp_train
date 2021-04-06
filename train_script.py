@@ -130,8 +130,8 @@ def built_LMAMPC_parser():
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=30)
     parser.add_argument('--eval_interval', type=int, default=5000) #间隔
-    parser.add_argument('--save_interval', type=int, default=100)
-    parser.add_argument('--log_interval', type=int, default=500)
+    parser.add_argument('--save_interval', type=int, default=5000)
+    parser.add_argument('--log_interval', type=int, default=1000)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")

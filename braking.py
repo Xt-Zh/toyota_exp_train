@@ -4,7 +4,7 @@
 import logging
 
 import numpy as np
-from gym.envs.user_defined.EmerBrake.models import MyBrakeModel
+from gym.envs.user_defined.EmerBrake.models import MyOriginBrakeModel
 
 from preprocessor import Preprocessor
 from utils.misc import TimerStat
@@ -34,7 +34,7 @@ class MyBrakingLearner(object):
         self.M = self.args.M
         self.num_rollout_list_for_policy_update = self.args.num_rollout_list_for_policy_update
 
-        self.model = MyBrakeModel()
+        self.model = MyOriginBrakeModel()
         self.preprocessor = Preprocessor((self.args.obs_dim,), self.args.obs_preprocess_type,
                                          self.args.reward_preprocess_type,
                                          self.args.obs_scale, self.args.reward_scale, self.args.reward_shift,
@@ -73,9 +73,12 @@ class MyBrakingLearner(object):
             actions, _ = self.actor_critic.compute_action(obses)  # -1<=actions<=1
             obses, rewards = self.model.rollout_out(actions)
             critic_target += discount * rewards
+            # assert np.all(rewards>=0)
             discount *= gamma
         # 在rollout的过程中和actor_loss的计算中都不采用罚函数吸收态，直接计算即可
         critic_target += discount * self.actor_critic.compute_value(obses)
+
+
         actor_loss = self.tf.reduce_mean(critic_target)  # 目的是最小化\sum l(x,u)+V
 
         # 在计算critic_loss的时候将那些已经到达不安全状态的情况设置为吸收态值
