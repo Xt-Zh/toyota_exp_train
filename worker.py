@@ -9,9 +9,9 @@
 
 import logging
 
-import gym
 import numpy as np
 
+import gym
 from preprocessor import Preprocessor
 from utils.misc import judge_is_nan, args2envkwargs
 
@@ -100,7 +100,9 @@ class OffPolicyWorker(object):
                 judge_is_nan([action])
                 raise ValueError
             obs_tp1, reward, self.done, info = self.env.step(action.numpy()[0])
-            batch_data.append((self.obs.copy(), action.numpy()[0], reward, obs_tp1.copy(), self.done))
+            processed_rew = self.preprocessor.process_rew(reward, self.done)
+            batch_data.append(
+                (self.obs.copy(), action.numpy()[0], reward, obs_tp1.copy(), self.done, info['ref_index']))
             self.obs = self.env.reset() if self.done else obs_tp1.copy()
             # self.env.render()
 

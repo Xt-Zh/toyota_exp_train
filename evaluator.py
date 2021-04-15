@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# =====================================
+# @Time    : 2020/9/1
+# @Author  : Yang Guan (Tsinghua Univ.)
+# @FileName: evaluator.py
+# =====================================
+
 import logging
 import os
 
-import gym
-import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 
+import gym
 from preprocessor import Preprocessor
 from utils.misc import TimerStat, args2envkwargs
 
@@ -33,12 +37,9 @@ class Evaluator(object):
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        self.preprocessor = Preprocessor((self.args.obs_dim,),
-                                         self.args.obs_preprocess_type,
+        self.preprocessor = Preprocessor((self.args.obs_dim,), self.args.obs_preprocess_type,
                                          self.args.reward_preprocess_type,
-                                         self.args.obs_scale,
-                                         self.args.reward_scale,
-                                         self.args.reward_shift,
+                                         self.args.obs_scale, self.args.reward_scale, self.args.reward_shift,
                                          gamma=self.args.gamma)
 
         self.writer = self.tf.summary.create_file_writer(self.log_dir)
@@ -61,7 +62,6 @@ class Evaluator(object):
         self.load_ppc_params(ppc_params_load_dir)
 
     def run_an_episode(self, steps=None, render=True):
-        # render=render_or_not
         reward_list = []
         reward_info_dict_list = []
         action_list = []
@@ -88,6 +88,10 @@ class Evaluator(object):
         episode_return = sum(reward_list)
         episode_len = len(reward_list)
         info_dict = dict()
+        # import matplotlib.pyplot as plt
+        # plt.figure(1)
+        # plt.plot(range(len(action_list)), action_list)
+        # plt.show()
         for key in reward_info_dict_list[0].keys():
             info_key = list(map(lambda x: x[key], reward_info_dict_list))
             mean_key = sum(info_key) / len(info_key)
@@ -97,8 +101,11 @@ class Evaluator(object):
         return info_dict
 
     def run_n_episode(self, n):
+        list_of_return = []
+        list_of_len = []
         list_of_info_dict = []
         for _ in range(n):
+            logger.info('logging {}-th episode'.format(_))
             info_dict = self.run_an_episode(self.args.fixed_steps, self.args.eval_render)
             list_of_info_dict.append(info_dict.copy())
         n_info_dict = dict()
@@ -121,99 +128,60 @@ class Evaluator(object):
             with self.writer.as_default():
                 for key, val in n_info_dict.items():
                     self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
+                for key, val in self.get_stats().items():
+                    self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)
                 self.writer.flush()
         if self.eval_times % self.args.eval_log_interval == 0:
-            # logger.info('Evaluator_info: {}, {}'.format(self.get_stats(), n_info_dict))
-            logger.info(f'Evaluator_info: iteration:{self.iteration}, eval_time:{self.eval_times}')
-        #     print(f"\033[1;30;43mEvaluator_time:{self.eval_times:d}\033[0m")
+            logger.info('Evaluator_info: {}, {}'.format(self.get_stats(), n_info_dict))
         self.eval_times += 1
 
-    # 绘图
-
-    def plot_critic(self):
-        d = np.linspace(-0, 10, 100)
-        v = np.linspace(-0, 10, 100)
-        maxv=np.sqrt(2 * 5 * d)
-
-        D, V = np.meshgrid(d, v)
-        flattenD = np.reshape(D, [-1, ])
-        flattenV = np.reshape(V, [-1, ])
-
-        obses = np.stack([flattenD, flattenV], 1)
+    def compute_action_from_batch_obses(self, path):
+        obses = np.load(path)
         preprocess_obs = self.preprocessor.np_process_obses(obses)
-        flatten_value = self.policy_with_value.compute_value(preprocess_obs).numpy()
+        action = self.policy_with_value.compute_mode(preprocess_obs)
+        action_np = action.numpy()
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.plot(range(action_np.shape[0]), action_np[:, 0])
+        plt.show()
+        a = 1
 
-        obses_max = np.vstack([d,maxv]).T
-        preprocess_obs_max = self.preprocessor.np_process_obses(obses_max)
-        flatten_value_max = self.policy_with_value.compute_value(preprocess_obs_max).numpy()
 
-        for k in range(flatten_value.shape[1]):
-            flatten_value_k = flatten_value[:, k]
-            critic = flatten_value_k.reshape(D.shape)
+def test_trained_model(model_dir, ppc_params_dir, iteration):
+    from train_script import built_mixedpg_parser
+    from policy import PolicyWithQs
+    args = built_mixedpg_parser()
+    evaluator = Evaluator(PolicyWithQs, args.env_id, args)
+    evaluator.load_weights(model_dir, iteration)
+    evaluator.load_ppc_params(ppc_params_dir)
+    return evaluator.metrics(1000, render=False, reset=False)
 
-            flatten_value_max_k=flatten_value_max[:,k]
-            critic_max=flatten_value_max_k.reshape(-1)
 
-            def plot_region(z, name):
-                plt.figure()
-                fig_plot=plt.contourf(D, V, z, 50, cmap='rainbow')
-                plt.plot(d, maxv, lw=2,color='k')
-                plt.colorbar(fig_plot)
-                plt.grid()
-                # name_2d = name + '_2d.jpg'
-                if not os.path.exists(os.path.join(self.log_dir,'critic')):
-                    os.mkdir(os.path.join(self.log_dir,'critic'))
-                name_2d = 'critic/2d_'+name+'.jpg'
-                plt.savefig(os.path.join(self.log_dir, name_2d))
-                plt.close()
+def atest_trained_model(model_dir, ppc_params_dir, iteration):
+    from train_script import built_AMPC_parser
+    from policy import Policy4Toyota
+    args = built_AMPC_parser()
+    evaluator = Evaluator(Policy4Toyota, args.env_id, args)
+    evaluator.load_weights(model_dir, iteration)
+    # evaluator.load_ppc_params(ppc_params_dir)
+    path = model_dir + '/all_obs.npy'
+    evaluator.compute_action_from_batch_obses(path)
 
-                figure = plt.figure()
-                ax = Axes3D(figure)
-                ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
-                ax.plot(d,maxv,critic_max,lw=2,color='k')
-                # plt.show()
-                # name_3d = name + '_3d.jpg'
-                name_3d = 'critic/3d_' + name + '.jpg'
-                plt.savefig(os.path.join(self.log_dir, name_3d))
-                plt.close()
 
-            plot_region(critic, name=f"critic_{self.iteration:d}")
+def test_evaluator():
+    import ray
+    ray.init()
+    import time
+    from train_script import built_parser
+    from policy import Policy4Toyota
+    args = built_parser('AMPC')
+    # evaluator = Evaluator(Policy4Toyota, args.env_id, args)
+    # evaluator.run_evaluation(3)
+    evaluator = ray.remote(num_cpus=1)(Evaluator).remote(Policy4Toyota, args.env_id, args)
+    evaluator.run_evaluation.remote(3)
+    time.sleep(10000)
 
-    def plot_actor(self):
-        d = np.linspace(-0, 10, 100)
-        v = np.linspace(-0, 10, 100)
 
-        D, V = np.meshgrid(d, v)
-        flattenD = np.reshape(D, [-1, ])
-        flattenV = np.reshape(V, [-1, ])
-        obses = np.stack([flattenD, flattenV], 1)
-        preprocess_obs = self.preprocessor.np_process_obses(obses)
-        flatten_value = self.policy_with_value.compute_action(preprocess_obs)[0].numpy()
-
-        for k in range(flatten_value.shape[1]):
-            flatten_value_k = flatten_value[:, k]
-            actor = flatten_value_k.reshape(D.shape)
-
-            def plot_region(z, name):
-                plt.figure()
-                fig_plot=plt.contourf(D, V, z, 50, cmap='rainbow')
-                plt.plot(d,np.sqrt(2 * 5 * d), lw=2,color='k')
-                plt.colorbar(fig_plot)
-                plt.grid()
-                # name_2d = name + '_2d.jpg'
-                if not os.path.exists(os.path.join(self.log_dir,'actor')):
-                    os.mkdir(os.path.join(self.log_dir,'actor'))
-                name_2d = 'actor/2d_'+name+'.jpg'
-                plt.savefig(os.path.join(self.log_dir, name_2d))
-                plt.close()
-
-                figure = plt.figure()
-                ax = Axes3D(figure)
-                ax.plot_surface(D, V, z, rstride=1, cstride=1, cmap='rainbow')
-                # plt.show()
-                # name_3d = name + '_3d.jpg'
-                name_3d = 'actor/3d_' + name + '.jpg'
-                plt.savefig(os.path.join(self.log_dir, name_3d))
-                plt.close()
-
-            plot_region(actor, name=f"actor_{self.iteration:d}")
+if __name__ == '__main__':
+    atest_trained_model('./results/toyota3lane/experiment-2021-01-03-12-38-00/models',
+                        './results/toyota3lane/experiment-2021-01-03-12-38-00/models', 100000)

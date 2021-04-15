@@ -12,6 +12,7 @@ import os
 import queue
 import random
 import threading
+from queue import Empty
 
 import ray
 import tensorflow as tf
@@ -19,7 +20,6 @@ import tensorflow as tf
 from utils.misc import judge_is_nan, TimerStat
 from utils.misc import random_choice_with_index
 from utils.task_pool import TaskPool
-from queue import Empty
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -106,9 +106,6 @@ class UpdateThread(threading.Thread):
             if self.args.obs_preprocess_type == 'normalize' or self.args.reward_preprocess_type == 'normalize':
                 self.evaluator.set_ppc_params.remote(self.local_worker.get_ppc_params())
             self.evaluator.run_evaluation.remote(self.iteration)
-            # 添加绘图命令
-            self.evaluator.plot_critic.remote()
-            self.evaluator.plot_actor.remote()
 
         # save
         if self.iteration % self.args.save_interval == 0:
@@ -229,7 +226,7 @@ class OffPolicyAsyncOptimizer(object):
                 self.steps_since_update[worker] += count
                 ppc_params = worker.get_ppc_params.remote()
                 if self.steps_since_update[worker] >= self.max_weight_sync_delay:
-                    judge_is_nan(self.local_worker.policy_with_value.actor.trainable_weights)
+                    judge_is_nan(self.local_worker.policy_with_value.policy.trainable_weights)
                     if weights is None:
                         weights = ray.put(self.local_worker.get_weights())
                     worker.set_weights.remote(weights)
@@ -251,8 +248,16 @@ class OffPolicyAsyncOptimizer(object):
             for learner, objID in self.learn_tasks.completed():
                 grads = ray.get(objID)
                 learner_stats = ray.get(learner.get_stats.remote())
+                if self.args.buffer_type == 'priority':
+                    info_for_buffer = ray.get(learner.get_info_for_buffer.remote())
+                    info_for_buffer['rb'].update_priorities.remote(info_for_buffer['indexes'],
+                                                                   info_for_buffer['td_error'])
                 rb, samples = self.learner_queue.get(block=False)
-
+                if ppc_params and \
+                        (
+                                self.args.obs_preprocess_type == 'normalize' or self.args.reward_preprocess_type == 'normalize'):
+                    learner.set_ppc_params.remote(ppc_params)
+                    self.local_worker.set_ppc_params(ppc_params)
                 if weights is None:
                     weights = ray.put(self.local_worker.get_weights())
                 learner.set_weights.remote(weights)
@@ -288,6 +293,10 @@ class SingleProcessOffPolicyOptimizer(object):
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
 
+        self.args.log_interval = 10
+        self.args.eval_interval = 3000
+        self.args.save_interval = 3000
+
         # fill buffer to replay starts
         logger.info('start filling the replay')
         while not len(self.replay_buffer) >= self.args.replay_starts:
@@ -302,6 +311,10 @@ class SingleProcessOffPolicyOptimizer(object):
     def get_stats(self):
         self.stats.update(dict(num_sampled_steps=self.num_sampled_steps,
                                iteration=self.iteration,
+                               sampling_time=self.timers['sampling_timer'].mean,
+                               replay_time=self.timers["replay_timer"].mean,
+                               learning_time=self.timers['learning_timer'].mean,
+                               grad_apply_timer=self.timers['grad_apply_timer'].mean
                                )
                           )
         return self.stats
@@ -363,9 +376,6 @@ class SingleProcessOffPolicyOptimizer(object):
             self.evaluator.set_weights(self.worker.get_weights())
             self.evaluator.set_ppc_params(self.worker.get_ppc_params())
             self.evaluator.run_evaluation(self.iteration)
-            #添加绘图命令
-            self.evaluator.plot_critic()
-            self.evaluator.plot_actor()
 
         # save
         if self.iteration % self.args.save_interval == 0:
