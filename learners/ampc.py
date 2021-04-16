@@ -79,6 +79,7 @@ class AMPCLearner(object):
     def model_rollout_for_update(self, start_obses, ite, mb_ref_index):
         start_obses = self.tf.tile(start_obses, [self.M, 1])
         self.model.reset(start_obses, mb_ref_index)
+
         rewards_sum = self.tf.zeros((start_obses.shape[0],))
         punish_terms_for_training_sum = self.tf.zeros((start_obses.shape[0],))
         real_punish_terms_sum = self.tf.zeros((start_obses.shape[0],))
@@ -95,6 +96,11 @@ class AMPCLearner(object):
             actions, _ = self.policy_with_value.compute_action(processed_obses)
             obses, rewards, punish_terms_for_training, real_punish_term, veh2veh4real, veh2road4real = self.model.rollout_out(
                 actions)
+            # if self.tf.reduce_min(rewards) <= -1000:
+            #     print((obses,rewards),end='')
+            #     print('****************************violated***************************************')
+            # print(rewards.shape)
+            # exit(0)
             rewards_sum += self.preprocessor.tf_process_rewards(rewards)
             punish_terms_for_training_sum += punish_terms_for_training
             real_punish_terms_sum += real_punish_term

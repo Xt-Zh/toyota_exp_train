@@ -43,17 +43,18 @@ def built_AMPC_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--mode', type=str, default='training')  # training testing
+    # parser.add_argument('--mode', type=str, default='testing')  # training testing
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = 'results/toyota3lane/experiment-2021-01-04-01-15-35'
+        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-04-15-20-22-42'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[100000],
+                           test_iter_list=[0, 5000, 10000, 15000, 90000],
                            test_log_dir=test_log_dir,
-                           num_eval_episode=5,
+                           num_eval_episode=1,
                            eval_log_interval=1,
                            fixed_steps=150))
         for key, val in params.items():
@@ -134,6 +135,9 @@ def built_AMPC_parser():
     parser.add_argument('--num_workers', type=int, default=1)
     parser.add_argument('--num_learners', type=int, default=4)
     parser.add_argument('--num_buffers', type=int, default=1)
+    # parser.add_argument('--num_workers', type=int, default=10)
+    # parser.add_argument('--num_learners', type=int, default=40)
+    # parser.add_argument('--num_buffers', type=int, default=10)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=20)
     parser.add_argument('--eval_interval', type=int, default=5000)
@@ -142,7 +146,8 @@ def built_AMPC_parser():
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    results_dir = './results/toyota3lane/experiment-{time}'.format(time=time_now)
+    results_dir = './results/high-dimension-result-local/experiment-{time}'.format(time=time_now)
+    # results_dir = './results/high-dimension-result-ecs/experiment-{time}'.format(time=time_now)
     parser.add_argument('--result_dir', type=str, default=results_dir)
     parser.add_argument('--log_dir', type=str, default=results_dir + '/logs')
     parser.add_argument('--model_dir', type=str, default=results_dir + '/models')
@@ -170,7 +175,7 @@ def main(alg_name):
     args = built_parser(alg_name)
     logger.info('begin training agents with parameter {}'.format(str(args)))
     if args.mode == 'training':
-        ray.init()
+        ray.init(object_store_memory=1 * 1024 * 1024 * 1024)
         os.makedirs(args.result_dir)
         with open(args.result_dir + '/config.json', 'w', encoding='utf-8') as f:
             json.dump(vars(args), f, ensure_ascii=False, indent=4)
@@ -200,4 +205,5 @@ def main(alg_name):
 
 
 if __name__ == '__main__':
+    print('running on local')
     main('AMPC')

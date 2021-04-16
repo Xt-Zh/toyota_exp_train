@@ -81,33 +81,16 @@ class Policy4Toyota(tf.Module):
     def compute_mode(self, obs):
         logits = self.policy(obs)
         mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-        return self.args.action_range * self.tf.tanh(mean) if self.args.action_range is not None else mean
-
-    def _logits2dist(self, logits):
-        mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-        act_dist = self.tfd.MultivariateNormalDiag(mean, self.tf.exp(log_std))
-        if self.args.action_range is not None:
-            act_dist = (
-                self.tfp.distributions.TransformedDistribution(
-                    distribution=act_dist,
-                    bijector=self.tfb.Chain(
-                        [self.tfb.Affine(scale_identity_multiplier=self.args.action_range),
-                         self.tfb.Tanh()])
-                ))
-        return act_dist
+        return mean
 
     @tf.function
     def compute_action(self, obs):
         with self.tf.name_scope('compute_action') as scope:
             logits = self.policy(obs)
-            if self.args.deterministic_policy:
-                mean, log_std = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-                return self.args.action_range * self.tf.tanh(mean) if self.args.action_range is not None else mean, 0.
-            else:
-                act_dist = self._logits2dist(logits)
-                actions = act_dist.sample()
-                logps = act_dist.log_prob(actions)
-                return actions, logps
+            assert self.args.deterministic_policy
+            mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
+            return mean, 0.
+
 
     @tf.function
     def compute_obj_v(self, obs):
@@ -120,74 +103,5 @@ class Policy4Toyota(tf.Module):
             return tf.squeeze(self.con_v(obs), axis=1)
 
 
-def test_policy():
-    import gym
-    from train_script import built_mixedpg_parser
-    args = built_mixedpg_parser()
-    print(args.obs_dim, args.act_dim)
-    env = gym.make('PathTracking-v0')
-    policy = PolicyWithQs(env.observation_space, env.action_space, args)
-    obs = np.random.random((128, 6))
-    act = np.random.random((128, 2))
-    Qs = policy.compute_Qs(obs, act)
-    print(Qs)
-
-
-def test_policy2():
-    from train_script import built_mixedpg_parser
-    import gym
-    args = built_mixedpg_parser()
-    env = gym.make('Pendulum-v0')
-    policy_with_value = PolicyWithQs(env.observation_space, env.action_space, args)
-
-
-def test_policy_with_Qs():
-    from train_script import built_mixedpg_parser
-    import gym
-    import numpy as np
-    import tensorflow as tf
-    args = built_mixedpg_parser()
-    args.obs_dim = 3
-    env = gym.make('Pendulum-v0')
-    policy_with_value = PolicyWithQs(env.observation_space, env.action_space, args)
-    # print(policy_with_value.policy.trainable_weights)
-    # print(policy_with_value.Qs[0].trainable_weights)
-    obses = np.array([[1., 2., 3.], [3., 4., 5.]], dtype=np.float32)
-
-    with tf.GradientTape() as tape:
-        acts, _ = policy_with_value.compute_action(obses)
-        Qs = policy_with_value.compute_Qs(obses, acts)[0]
-        print(Qs)
-        loss = tf.reduce_mean(Qs)
-
-    gradient = tape.gradient(loss, policy_with_value.policy.trainable_weights)
-    print(gradient)
-
-
-def test_mlp():
-    import tensorflow as tf
-    import numpy as np
-    policy = tf.keras.Sequential([tf.keras.layers.Dense(128, input_shape=(3,), activation='elu'),
-                                  tf.keras.layers.Dense(128, input_shape=(3,), activation='elu'),
-                                  tf.keras.layers.Dense(1, activation='elu')])
-    value = tf.keras.Sequential([tf.keras.layers.Dense(128, input_shape=(4,), activation='elu'),
-                                 tf.keras.layers.Dense(128, input_shape=(3,), activation='elu'),
-                                 tf.keras.layers.Dense(1, activation='elu')])
-    print(policy.trainable_variables)
-    print(value.trainable_variables)
-    with tf.GradientTape() as tape:
-        obses = np.array([[1., 2., 3.], [3., 4., 5.]], dtype=np.float32)
-        obses = tf.convert_to_tensor(obses)
-        acts = policy(obses)
-        a = tf.reduce_mean(acts)
-        print(acts)
-        Qs = value(tf.concat([obses, acts], axis=-1))
-        print(Qs)
-        loss = tf.reduce_mean(Qs)
-
-    gradient = tape.gradient(loss, policy.trainable_weights)
-    print(gradient)
-
-
 if __name__ == '__main__':
-    test_policy_with_Qs()
+    pass
