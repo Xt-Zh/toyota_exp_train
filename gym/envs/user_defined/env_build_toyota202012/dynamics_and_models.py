@@ -118,12 +118,13 @@ class EnvironmentModel(object):  # all tensors
     def rollout_out(self, actions):  # obses and actions are tensors, think of actions are in range [-1, 1]
         with tf.name_scope('model_step') as scope:
             self.actions = self._action_transformation_for_end2end(actions)
-            rewards, punish_term_for_training, real_punish_term, veh2veh4real, veh2road4real, _ \
+            rewards, punish_term_for_training, real_punish_term, veh2veh4real, veh2road4real, reward_dict \
                 = self.compute_rewards(self.obses, self.actions)
             self.obses = self.compute_next_obses(self.obses, self.actions)
             # self.reward_info.update({'final_rew': rewards.numpy()[0]})
+            safe_info = reward_dict['safe_info']
 
-        return self.obses, rewards, punish_term_for_training, real_punish_term, veh2veh4real, veh2road4real
+        return self.obses, rewards, punish_term_for_training, real_punish_term, veh2veh4real, veh2road4real, safe_info
 
     def _action_transformation_for_end2end(self, actions):  # [-1, 1]
         actions = tf.clip_by_value(actions, -1.05, 1.05)
@@ -263,12 +264,10 @@ class EnvironmentModel(object):  # all tensors
                         tf.square(ego_point[1] - (-LANE_WIDTH * LANE_NUMBER) - 1), tf.zeros_like(veh_infos[:, 0]))
 
             rewards = 0.05 * devi_v + 0.8 * devi_y + 30 * devi_phi + 0.02 * punish_yaw_rate + \
-                      5 * punish_steer + 0.05 * punish_a_x #if int(safe_info)==1 else
-            # print(rewards)
-            rewards = tf.where(safe_info == 0, tf.ones_like(veh_infos[:, 0])*(-1000), rewards)
-            # if tf.reduce_min(rewards) <= -1000:
-            #     print(veh_infos[:, 0],end='')
-            #     print('****************************violated***************************************')
+                      5 * punish_steer + 0.05 * punish_a_x
+
+            # TODO：这里rewards应保持原来的reward,但希望回传safe_info
+            # rewards = tf.where(safe_info == 0, tf.ones_like(veh_infos[:, 0])*(-1000), rewards)
 
             punish_term_for_training = veh2veh4training + veh2road4training
             real_punish_term = veh2veh4real + veh2road4real
@@ -289,7 +288,7 @@ class EnvironmentModel(object):  # all tensors
                                veh2road4training=veh2road4training,
                                veh2veh4real=veh2veh4real,
                                veh2road4real=veh2road4real,
-                               safe=safe_info,
+                               safe_info=safe_info,
                                )
 
             return rewards, punish_term_for_training, real_punish_term, veh2veh4real, veh2road4real, reward_dict

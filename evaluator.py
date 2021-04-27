@@ -72,6 +72,8 @@ class Evaluator(object):
             for _ in range(steps):
                 processed_obs = self.preprocessor.tf_process_obses(obs)
                 action = self.policy_with_value.compute_mode(processed_obs[np.newaxis, :])
+                value = self.policy_with_value.compute_value_net(processed_obs[np.newaxis, :])
+                self.env.set_value(value)
                 obs, reward, done, info = self.env.step(action.numpy()[0])
                 reward_info_dict_list.append(info['reward_info'])
                 if render: self.env.render()

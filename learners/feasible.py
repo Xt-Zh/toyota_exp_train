@@ -44,6 +44,7 @@ class FeasibleLearner(object):
         self.grad_timer = TimerStat()
         self.stats = {}
         self.info_for_buffer = {}
+        self.test_min=0
 
     def get_stats(self):
         return self.stats
@@ -93,12 +94,8 @@ class FeasibleLearner(object):
         for _ in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
             actions, _ = self.policy_with_value.compute_action(processed_obses)
-            obses, rewards, punish_terms_for_training, real_punish_term, veh2veh4real, veh2road4real = \
-                self.model.rollout_out(actions)
+            obses, rewards, _, _, _, _, safe_info  = self.model.rollout_out(actions)
             # 此处rewards<0，但是在计算obj_loss时会取相反数使之为正
-            # if self.tf.reduce_min(rewards) <= -1000:
-            #     print((obses,rewards),end='')
-            #     print('****************************violated***************************************')
             # print(rewards.shape)
             # exit(0)
             rewards_sum += self.preprocessor.tf_process_rewards(rewards)
@@ -108,10 +105,13 @@ class FeasibleLearner(object):
             # veh2veh4real_sum += veh2veh4real
             # veh2road4real_sum += veh2road4real
 
-        value_loss = self.tf.reduce_mean(self.tf.square(value_pred - self.tf.stop_gradient(rewards_sum)))
-
         # policy loss
         policy_loss = -self.tf.reduce_mean(rewards_sum)
+
+        rewards_absorb = self.tf.where(safe_info == 0, self.tf.ones_like(rewards_sum)*(-1000), rewards_sum)
+
+        # value的目的是学习一个正值
+        value_loss = self.tf.reduce_mean(self.tf.square(value_pred + self.tf.stop_gradient(rewards_absorb)))
 
         return value_loss, policy_loss
 

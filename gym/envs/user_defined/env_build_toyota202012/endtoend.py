@@ -50,6 +50,7 @@ class CrossroadEnd2end(gym.Env):
                  display=False,
                  **kwargs):
         metadata = {'render.modes': ['human']}
+        self.value = None
         self.dynamics = VehicleDynamics()
         self.interested_vehs = None
         self.training_task = training_task
@@ -140,6 +141,9 @@ class CrossroadEnd2end(gym.Env):
         self.reward_info.update({'final_rew': reward})
         all_info.update({'reward_info': self.reward_info, 'ref_index': self.ref_path.ref_index})
         return self.obs, reward, done, all_info
+
+    def set_value(self, value):
+        self.value = value
 
     def _set_observation_space(self, observation):
         self.observation_space = convert_observation_to_space(observation)
@@ -755,6 +759,10 @@ class CrossroadEnd2end(gym.Env):
                 steer, a_x = self.action[0], self.action[1]
                 plt.text(text_x, text_y_start - next(ge), r'steer: {:.2f}rad (${:.2f}\degree$)'.format(steer, steer * 180 / np.pi))
                 plt.text(text_x, text_y_start - next(ge), 'a_x: {:.2f}m/s^2'.format(a_x))
+            if self.value is not None:
+                value = self.value[0] if isinstance(self.value, np.ndarray) else self.value
+                plt.text(text_x, text_y_start - next(ge), r'value: {:.2f}'.format(float(value)))
+                # plt.text(text_x, text_y_start - next(ge), 'a_x: {:.2f}m/s^2'.format(a_x))
 
             text_x, text_y_start = 80, 60
             ge = iter(range(0, 1000, 4))

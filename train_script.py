@@ -45,21 +45,22 @@ NAME2EVALUATORS = dict([('Evaluator', Evaluator), ('None', None)])
 def built_AMPC_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--mode', type=str, default='training')  # training testing
-    # parser.add_argument('--mode', type=str, default='testing')  # training testing
+    # parser.add_argument('--mode', type=str, default='training')  # training testing
+    parser.add_argument('--mode', type=str, default='testing')  # training testing
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-04-15-20-22-42'
+        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-04-17-20-23-17-36w'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[0, 5000, 10000, 15000, 90000],
+                           test_iter_list=[360000],
                            test_log_dir=test_log_dir,
-                           num_eval_episode=1,
+                           num_eval_episode=3,
                            eval_log_interval=1,
-                           fixed_steps=150))
+                           fixed_steps=150,
+                           eval_render=True))
         for key, val in params.items():
             parser.add_argument("-" + key, default=val)
         return parser.parse_args()
@@ -113,7 +114,7 @@ def built_AMPC_parser():
     parser.add_argument('--num_eval_episode', type=int, default=2)
     parser.add_argument('--eval_log_interval', type=int, default=1)
     parser.add_argument('--fixed_steps', type=int, default=50)
-    parser.add_argument('--eval_render', type=bool, default=True)
+    parser.add_argument('--eval_render', type=bool, default=False)
 
     # policy and model
     parser.add_argument('--value_model_cls', type=str, default='MLP')
