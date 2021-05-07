@@ -50,12 +50,12 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-04-17-20-23-17-36w'
+        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-05-02-22-10-54'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[360000],
+                           test_iter_list=[130000],
                            test_log_dir=test_log_dir,
                            num_eval_episode=3,
                            eval_log_interval=1,
@@ -120,7 +120,7 @@ def built_AMPC_parser():
     parser.add_argument('--value_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_lr_schedule', type=list, default=[3e-5, 100000, 1e-5])
-    parser.add_argument('--value_lr_schedule', type=list, default=[8e-5, 100000, 1e-5])
+    parser.add_argument('--value_lr_schedule', type=list, default=[8e-4, 100000, 1e-5])
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--num_hidden_units', type=int, default=256)
     parser.add_argument('--hidden_activation', type=str, default='elu')

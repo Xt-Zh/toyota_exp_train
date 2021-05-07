@@ -110,8 +110,11 @@ class FeasibleLearner(object):
 
         rewards_absorb = self.tf.where(safe_info == 0, self.tf.ones_like(rewards_sum)*(-1000), rewards_sum)
 
+        target = self.tf.stop_gradient(-rewards_absorb + self.policy_with_value.compute_value_net(self.preprocessor.tf_process_obses(obses)))
+
+
         # value的目的是学习一个正值
-        value_loss = self.tf.reduce_mean(self.tf.square(value_pred + self.tf.stop_gradient(rewards_absorb)))
+        value_loss = self.tf.reduce_mean(self.tf.square(value_pred - self.tf.clip_by_value(target,0,10000)))
 
         return value_loss, policy_loss
 
