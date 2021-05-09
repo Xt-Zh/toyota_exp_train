@@ -50,12 +50,12 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-05-02-22-10-54'
+        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-05-09-13-55-51'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[130000],
+                           test_iter_list=[200000],
                            test_log_dir=test_log_dir,
                            num_eval_episode=3,
                            eval_log_interval=1,
@@ -98,14 +98,14 @@ def built_AMPC_parser():
     parser.add_argument('--pf_amplifier', type=float, default=1.)
 
     # worker
-    parser.add_argument('--batch_size', type=int, default=512)
+    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--worker_log_interval', type=int, default=5)
     parser.add_argument('--explore_sigma', type=float, default=None)
 
     # buffer
-    parser.add_argument('--max_buffer_size', type=int, default=50000)
-    parser.add_argument('--replay_starts', type=int, default=3000)
-    parser.add_argument('--replay_batch_size', type=int, default=256)
+    parser.add_argument('--max_buffer_size', type=int, default=1000)
+    parser.add_argument('--replay_starts', type=int, default=300)
+    parser.add_argument('--replay_batch_size', type=int, default=128)
     parser.add_argument('--replay_alpha', type=float, default=0.6)
     parser.add_argument('--replay_beta', type=float, default=0.4)
     parser.add_argument('--buffer_log_interval', type=int, default=40000)
@@ -148,7 +148,7 @@ def built_AMPC_parser():
     parser.add_argument('--grads_queue_size', type=int, default=20)
     parser.add_argument('--eval_interval', type=int, default=5000)
     parser.add_argument('--save_interval', type=int, default=5000)
-    parser.add_argument('--log_interval', type=int, default=100)
+    parser.add_argument('--log_interval', type=int, default=1)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")

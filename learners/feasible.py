@@ -44,7 +44,7 @@ class FeasibleLearner(object):
         self.grad_timer = TimerStat()
         self.stats = {}
         self.info_for_buffer = {}
-        self.test_min=0
+        self.test_min = 0
 
     def get_stats(self):
         return self.stats
@@ -82,43 +82,38 @@ class FeasibleLearner(object):
         self.model.reset(start_obses, mb_ref_index)
 
         rewards_sum = self.tf.zeros((start_obses.shape[0],))
-        # punish_terms_for_training_sum = self.tf.zeros((start_obses.shape[0],))
-        # real_punish_terms_sum = self.tf.zeros((start_obses.shape[0],))
-        # veh2veh4real_sum = self.tf.zeros((start_obses.shape[0],))
-        # veh2road4real_sum = self.tf.zeros((start_obses.shape[0],))
         obses = start_obses
-        # pf = self.punish_factor_schedule(ite)
         processed_obses = self.preprocessor.tf_process_obses(obses)
         value_pred = self.policy_with_value.compute_value_net(processed_obses)
 
-        for _ in range(self.num_rollout_list_for_policy_update[0]):
+        gamma = 0.9
+        discount = 1.0
+
+        for i in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
             actions, _ = self.policy_with_value.compute_action(processed_obses)
-            obses, rewards, _, _, _, _, safe_info  = self.model.rollout_out(actions)
-            # 此处rewards<0，但是在计算obj_loss时会取相反数使之为正
-            # print(rewards.shape)
-            # exit(0)
-            rewards_sum += self.preprocessor.tf_process_rewards(rewards)
+            obses, rewards, _, _, _, _, safe_info = self.model.rollout_out(actions)
 
-            # punish_terms_for_training_sum += punish_terms_for_training
-            # real_punish_terms_sum += real_punish_term
-            # veh2veh4real_sum += veh2veh4real
-            # veh2road4real_sum += veh2road4real
+            rewards_sum += discount * self.preprocessor.tf_process_rewards(rewards)
+            discount *= gamma
+
+        now_state = self.preprocessor.tf_process_obses(obses)
+        now_state_value = self.policy_with_value.compute_value_net(now_state)
+
+        # print(self.tf.reduce_max(-rewards_sum))
 
         # policy loss
-        policy_loss = -self.tf.reduce_mean(rewards_sum)
-
-        rewards_absorb = self.tf.where(safe_info == 0, self.tf.ones_like(rewards_sum)*(-1000), rewards_sum)
-
-        target = self.tf.stop_gradient(-rewards_absorb + self.policy_with_value.compute_value_net(self.preprocessor.tf_process_obses(obses)))
-
+        policy_loss = self.tf.reduce_mean(-rewards_sum + now_state_value * discount)
+        rewards_absorb = self.tf.where(safe_info == 0, self.tf.ones_like(rewards_sum) * (-500), rewards_sum)
+        target = self.tf.stop_gradient(-rewards_absorb + now_state_value)
 
         # value的目的是学习一个正值
-        value_loss = self.tf.reduce_mean(self.tf.square(value_pred - self.tf.clip_by_value(target,0,10000)))
+        value_loss = self.tf.reduce_mean(self.tf.square(value_pred - self.tf.clip_by_value(target, 0, 10000)))
 
         return value_loss, policy_loss
 
     @tf.function
+    # TODO:真正训练的时候记得加上tf.function
     def forward_and_backward(self, mb_obs, ite, mb_ref_index):
         with self.tf.GradientTape(persistent=True) as tape:
             value_loss, policy_loss = self.model_rollout_for_update(mb_obs, ite, mb_ref_index)
