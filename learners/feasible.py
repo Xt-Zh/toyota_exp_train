@@ -79,14 +79,16 @@ class FeasibleLearner(object):
         processed_obses = self.preprocessor.tf_process_obses(obses)
         value_pred = self.policy_with_value.compute_value_net(processed_obses)
 
-        gamma = 0.9
+        gamma = 0.99
         discount = 1.0
 
+        safe_info = self.tf.ones_like(processed_obses[:, 0])
         for i in range(self.num_rollout_list_for_policy_update[0]):
             processed_obses = self.preprocessor.tf_process_obses(obses)
             actions, _ = self.policy_with_value.compute_action(processed_obses)
-            obses, rewards, _, _, _, _, safe_info = self.model.rollout_out(actions)
-
+            obses, rewards, _, _, _, _, now_safe_info = self.model.rollout_out(actions)
+            safe_info = safe_info * now_safe_info
+            # print(i,safe_info[:10],now_safe_info[:10])
             rewards_sum += discount * self.preprocessor.tf_process_rewards(rewards)
             discount *= gamma
 
@@ -98,7 +100,7 @@ class FeasibleLearner(object):
         # policy loss
         policy_loss = self.tf.reduce_mean(-rewards_sum + now_state_value * discount)
         rewards_absorb = self.tf.where(safe_info == 0, self.tf.ones_like(rewards_sum) * (-500), rewards_sum)
-        target = self.tf.stop_gradient(-rewards_absorb + now_state_value)
+        target = self.tf.stop_gradient(-rewards_absorb + now_state_value * discount)
 
         # value的目的是学习一个正值
         value_loss = self.tf.reduce_mean(self.tf.square(value_pred - self.tf.clip_by_value(target, 0, 10000)))

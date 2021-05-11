@@ -99,13 +99,17 @@ class OffPolicyWorker(object):
                 action, logp = self.policy_with_value.compute_action(processed_obs[np.newaxis, :])
                 judge_is_nan([action])
                 raise ValueError
-            obs_tp1, reward, self.done, info = self.env.step(action.numpy()[0])
+            obs_tp1, reward, self.done, info = self.env.step(action.numpy()[0]) # step: in endtoend.py
             processed_rew = self.preprocessor.process_rew(reward, self.done)
             batch_data.append(
                 (self.obs.copy(), action.numpy()[0], reward, obs_tp1.copy(), self.done, info['ref_index']))
             self.obs = self.env.reset() if self.done else obs_tp1.copy()
             # self.env.render()
-            if self.done: self.env.reset() # TODO: done type in endtoend.py line 202
+            done_info=info['done_info']
+            # if self.done:
+            if self.done:
+                logger.info(f'Sampliing :{self.done},{done_info}')
+                self.env.reset() # TODO: done type in endtoend.py line 202
 
         if self.worker_id == 1 and self.sample_times % self.args.worker_log_interval == 0:
             logger.info('Worker_info: {}'.format(self.get_stats()))
