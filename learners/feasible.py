@@ -70,13 +70,6 @@ class FeasibleLearner(object):
     def set_ppc_params(self, params):
         self.preprocessor.set_params(params)
 
-    def punish_factor_schedule(self, ite):
-        init_pf = self.args.init_punish_factor
-        interval = self.args.pf_enlarge_interval
-        amplifier = self.args.pf_amplifier
-        pf = init_pf * self.tf.pow(amplifier, self.tf.cast(ite // interval, self.tf.float32))
-        return pf
-
     def model_rollout_for_update(self, start_obses, ite, mb_ref_index):
         start_obses = self.tf.tile(start_obses, [self.M, 1])
         self.model.reset(start_obses, mb_ref_index)
@@ -100,7 +93,7 @@ class FeasibleLearner(object):
         now_state = self.preprocessor.tf_process_obses(obses)
         now_state_value = self.policy_with_value.compute_value_net(now_state)
 
-        # print(self.tf.reduce_max(-rewards_sum))
+        # print(self.tf.reduce_max(rewards_sum))
 
         # policy loss
         policy_loss = self.tf.reduce_mean(-rewards_sum + now_state_value * discount)
@@ -112,8 +105,7 @@ class FeasibleLearner(object):
 
         return value_loss, policy_loss
 
-    @tf.function
-    # TODO:真正训练的时候记得加上tf.function
+    # @tf.function
     def forward_and_backward(self, mb_obs, ite, mb_ref_index):
         with self.tf.GradientTape(persistent=True) as tape:
             value_loss, policy_loss = self.model_rollout_for_update(mb_obs, ite, mb_ref_index)

@@ -50,12 +50,12 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-05-09-13-55-51'
+        test_dir = r'./results/high-dimension-result-ecs/experiment-2021-05-09-21-30-47'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[200000],
+                           test_iter_list=[240000,300000],
                            test_log_dir=test_log_dir,
                            num_eval_episode=3,
                            eval_log_interval=1,
