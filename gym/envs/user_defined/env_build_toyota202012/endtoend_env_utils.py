@@ -15,7 +15,7 @@ L, W = 4.8, 2.0
 LANE_WIDTH = 3.75
 LANE_NUMBER = 2
 CROSSROAD_SIZE = 36
-EXPECTED_V = 8.
+EXPECTED_V = 3.
 dirname = os.path.dirname(__file__)
 SUMOCFG_DIR = dirname + "/sumo_files/cross.sumocfg"
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, ud=2, ul=2),

@@ -139,7 +139,7 @@ class CrossroadEnd2end(gym.Env):
         self.obs = self._get_obs()
         self.done_type, done = self._judge_done()
         self.reward_info.update({'final_rew': reward})
-        all_info.update({'reward_info': self.reward_info, 'ref_index': self.ref_path.ref_index})
+        all_info.update({'reward_info': self.reward_info, 'ref_index': self.ref_path.ref_index, 'done_info': self.done_type})
         return self.obs, reward, done, all_info
 
     def set_value(self, value):
@@ -207,8 +207,8 @@ class CrossroadEnd2end(gym.Env):
          3: good done: task succeed
          4: not done
         """
-        if self.traffic.collision_flag:
-            return 'collision', 1
+        # if self.traffic.collision_flag:
+        #     return 'collision', 1
         if self._break_road_constrain():
             return 'break_road_constrain', 1
         # elif self._deviate_too_much():
@@ -250,7 +250,7 @@ class CrossroadEnd2end(gym.Env):
         x = self.ego_dynamics['x']
         y = self.ego_dynamics['y']
         if self.training_task == 'left':
-            return True if x < -CROSSROAD_SIZE/2 - 10 and 0 < y < LANE_NUMBER*LANE_WIDTH else False
+            return True if x < -CROSSROAD_SIZE/2 - 10 and 0 < y < LANE_NUMBER*LANE_WIDTH else False # TODO: y_range
         elif self.training_task == 'right':
             return True if x > CROSSROAD_SIZE/2 + 10 and -LANE_NUMBER*LANE_WIDTH < y < 0 else False
         else:

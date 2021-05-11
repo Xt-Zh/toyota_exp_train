@@ -79,6 +79,8 @@ class Evaluator(object):
                 if render: self.env.render()
                 reward_list.append(reward)
                 action_list.append(action[0])
+                print(done, info['done_info'])
+                if info['done_info'] == 'good_done': break
         else:
             while not done:
                 processed_obs = self.preprocessor.tf_process_obses(obs)
