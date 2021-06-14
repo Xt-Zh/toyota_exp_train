@@ -315,32 +315,6 @@ class EnvironmentModel(object):  # all tensors
         # next_obses = self.convert_vehs_to_rela(next_obses)
         return next_obses
 
-    # def convert_vehs_to_rela(self, obs_abso):
-    #     ego_infos, tracking_infos, veh_infos = obs_abso[:, :self.ego_info_dim], \
-    #                                            obs_abso[:, self.ego_info_dim:self.ego_info_dim + self.per_tracking_info_dim * (
-    #                                                      self.num_future_data + 1)], \
-    #                                            obs_abso[:, self.ego_info_dim + self.per_tracking_info_dim * (
-    #                                                        self.num_future_data + 1):]
-    #     ego_x, ego_y = ego_infos[:, 3], ego_infos[:, 4]
-    #     ego = tf.tile(tf.stack([ego_x, ego_y, tf.zeros_like(ego_x), tf.zeros_like(ego_x)], 1),
-    #                   (1, int(tf.shape(veh_infos)[1]/self.per_veh_info_dim)))
-    #     vehs_rela = veh_infos - ego
-    #     out = tf.concat([ego_infos, tracking_infos, vehs_rela], 1)
-    #     return out
-
-    # def convert_vehs_to_abso(self, obs_rela):
-    #     ego_infos, tracking_infos, veh_rela = obs_rela[:, :self.ego_info_dim], \
-    #                                            obs_rela[:, self.ego_info_dim:self.ego_info_dim + self.per_tracking_info_dim * (
-    #                                                    self.num_future_data + 1)], \
-    #                                            obs_rela[:, self.ego_info_dim + self.per_tracking_info_dim * (
-    #                                                    self.num_future_data + 1):]
-    #     ego_x, ego_y = ego_infos[:, 3], ego_infos[:, 4]
-    #     ego = tf.tile(tf.stack([ego_x, ego_y, tf.zeros_like(ego_x), tf.zeros_like(ego_x)], 1),
-    #                   (1, int(tf.shape(veh_rela)[1] / self.per_veh_info_dim)))
-    #     vehs_abso = veh_rela + ego
-    #     out = tf.concat([ego_infos, tracking_infos, vehs_abso], 1)
-    #     return out
-
     def ego_predict(self, ego_infos, actions):
         ego_next_infos, _ = self.vehicle_dynamics.prediction(ego_infos[:, :6], actions, self.base_frequency)
         v_xs, v_ys, rs, xs, ys, phis = ego_next_infos[:, 0], ego_next_infos[:, 1], ego_next_infos[:, 2], \
@@ -793,55 +767,6 @@ class ReferencePath(object):
         plt.show()
 
 
-def test_ref_path():
-    path = ReferencePath('left')
-    path.plot_path(1.875, 0)
-
-
-def test_future_n_data():
-    path = ReferencePath('straight')
-    plt.axis('equal')
-    current_i = 600
-    plt.plot(path.path[0], path.path[1])
-    future_data_list = path.future_n_data(current_i, 5)
-    plt.plot(path.indexs2points(current_i)[0], path.indexs2points(current_i)[1], 'go')
-    for point in future_data_list:
-        plt.plot(point[0], point[1], 'r*')
-    plt.show()
-
-
-def test_tracking_error_vector():
-    path = ReferencePath('straight')
-    xs = np.array([1.875, 1.875, -10, -20], np.float32)
-    ys = np.array([-20, 0, -10, -1], np.float32)
-    phis = np.array([90, 135, 135, 180], np.float32)
-    vs = np.array([10, 12, 10, 10], np.float32)
-
-    tracking_error_vector = path.tracking_error_vector(xs, ys, phis, vs, 10)
-    print(tracking_error_vector)
-
-
-def test_model():
-    from endtoend import CrossroadEnd2end
-    env = CrossroadEnd2end('left', 0)
-    model = EnvironmentModel('left', 0)
-    obs_list = []
-    obs = env.reset()
-    done = 0
-    # while not done:
-    for i in range(10):
-        obs_list.append(obs)
-        action = np.array([0, -1], dtype=np.float32)
-        obs, reward, done, info = env.step(action)
-        env.render()
-    obses = np.stack(obs_list, 0)
-    model.reset(obses, 'left')
-    print(obses.shape)
-    for rollout_step in range(100):
-        actions = tf.tile(tf.constant([[0.5, 0]], dtype=tf.float32), tf.constant([len(obses), 1]))
-        obses, rewards, punish1, punish2, _, _ = model.rollout_out(actions)
-        print(rewards.numpy()[0], punish1.numpy()[0])
-        model.render()
 
 
 if __name__ == '__main__':

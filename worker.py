@@ -30,7 +30,7 @@ class OffPolicyWorker(object):
         logging.getLogger("tensorflow").setLevel(logging.ERROR)
         self.worker_id = worker_id
         self.args = args
-        self.env = gym.make(env_id, **args2envkwargs(args))
+        self.env = gym.make(env_id)
         self.policy_with_value = policy_cls(self.args)
         self.batch_size = self.args.batch_size
         self.obs = self.env.reset()
@@ -102,13 +102,13 @@ class OffPolicyWorker(object):
             obs_tp1, reward, self.done, info = self.env.step(action.numpy()[0]) # step: in endtoend.py
             processed_rew = self.preprocessor.process_rew(reward, self.done)
             batch_data.append(
-                (self.obs.copy(), action.numpy()[0], reward, obs_tp1.copy(), self.done, info['ref_index']))
+                (self.obs.copy(), action.numpy()[0], reward, obs_tp1.copy(), self.done))
             self.obs = self.env.reset() if self.done else obs_tp1.copy()
             # self.env.render()
             done_info=info['done_info']
             # if self.done:
             if self.done:
-                logger.info(f'Sampliing :{self.done},{done_info}')
+                # logger.info(f'Sampliing :{self.done},{done_info}')
                 self.env.reset() # TODO: done type in endtoend.py line 202
 
         if self.worker_id == 1 and self.sample_times % self.args.worker_log_interval == 0:
