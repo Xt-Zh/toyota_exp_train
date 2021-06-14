@@ -49,8 +49,8 @@ class VehicleDynamics(object):
         """
         动力学模型
 
-        :param states:  shape:(bs,6)
-        :param actions: shape:(bs,2)
+        :param states:  shape:(bs,6) : vx, vy, r, x, y, phi
+        :param actions: shape:(bs,2) : steer, acceleration
         :param tau:  单步时间步长, float
         :return:
         """
@@ -93,15 +93,10 @@ class VehicleDynamics(object):
         # actions shape: (bs, 2)
         with tf.name_scope('model_step') as scope:
             rewards  = self._get_reward()
-
-            # print(actions)
-
             self.obses, _ = self.prediction(self.obses, actions, self.frequency)
+            is_not_safe = self._judge_collision(self.obses[:,3],self.obses[:,4])
 
-            # print(self.obses)
-            is_safe = self._judge_collision(self.obses[:,3],self.obses[:,4])
-
-        return self.obses, rewards, is_safe
+        return self.obses, rewards, is_not_safe
 
     def _get_reward(self):
         """
@@ -122,10 +117,11 @@ class VehicleDynamics(object):
         obs_y = self.obstacle_info.y
         obs_height = self.obstacle_info.height
 
-        is_collapse = (((obs_x <= xs) & (xs <= obs_x + obs_width)) |
-        ((obs_x<=xs+self.car_info.width) & (xs+self.car_info.width <= obs_x + obs_width))) & \
-        (((obs_y <= ys) & (ys <= obs_y + obs_height)) |
-         ((obs_y <= ys + self.car_info.height) & (ys + self.car_info.height <= obs_y + obs_height)))
+        is_collapse = ((((obs_x <= xs) & (xs <= obs_x + obs_width)) |
+        ((obs_x<=xs+self.car_info.width) & (xs+self.car_info.width <= obs_x + obs_width))) &
+                       (((obs_y <= ys) & (ys <= obs_y + obs_height)) |
+         ((obs_y <= ys + self.car_info.height) & (ys + self.car_info.height <= obs_y + obs_height)))) | \
+                      (ys < self.constraint.min_y) & (ys < self.constraint.max_y)
 
         # if obs_x <= xs <= obs_x + obs_width or \
         #         obs_x <= xs + self.car_info.width <= obs_x + obs_width:
@@ -148,14 +144,14 @@ if __name__ == '__main__':
     obs = env.reset()
     for i in range(50):
         obs_list.append(obs)
-    # while True:
-    #     action = np.array([[0, 2]], dtype=np.float32)
-    #     obs, reward, done, info = env.step(action)
-    #     env.render()
-    #     if done: env.reset()
-    obses = np.stack(obs_list, 0)
-    dym=VehicleDynamics(bs=10)
-    actions = tf.tile(tf.constant([[0.5, -0.5]], dtype=tf.float32), tf.constant([len(obses), 1]))
-    a,b=dym.prediction(obses,actions,2.0)
-    print(a)
-    print(b)
+    while True:
+        action = np.array([-0.05, 2], dtype=np.float32)
+        obs, reward, done, info = env.step(action)
+        env.render()
+        if done: env.reset()
+    # obses = np.stack(obs_list, 0)
+    # dym=VehicleDynamics(bs=10)
+    # actions = tf.tile(tf.constant([[0.5, -0.5]], dtype=tf.float32), tf.constant([len(obses), 1]))
+    # a,b=dym.prediction(obses,actions,2.0)
+    # print(a)
+    # print(b)

@@ -89,6 +89,10 @@ class CarEnv(gym.Env):
                                                 high=-np.inf * np.ones(6),
                                                 shape=(6,))  # 状态空间
         self.obs = self._reset_init_state()
+        self.action = None
+        self.reward = None
+
+        self.value = 0
         self.done = False
 
         self.dynamics = VehicleDynamics(bs=10)
@@ -107,11 +111,20 @@ class CarEnv(gym.Env):
                                         width=5,
                                         height=2))
 
+        self.axis_info = edict(dict(xmin=-15,
+                                    xmax=30,
+                                    ymin=-2,
+                                    ymax=15))
+
         self.frequency = 10
+
+        self.fig = plt.figure(num='one',figsize=(10,5))
 
     def reset(self):
         self.obs = self._reset_init_state()
         self.action = np.array([0.0, 0.0], dtype=np.float32)
+        self.reward = self._get_reward()
+
         plt.clf()
         return self.obs
 
@@ -121,24 +134,28 @@ class CarEnv(gym.Env):
         done = self._get_done()
         obs = self._get_next_observation(action)
         self.obs = obs
+        self.action = action
         self.reward = reward
-        info = {'action': action,'done_info':done}  # 用于记录训练过程中的环境信息,便于观察训练状态
+        info = {'action': action,'done_info':done,'reward_info':0.0}  # 用于记录训练过程中的环境信息,便于观察训练状态
         return obs, reward, done, info
 
     def render(self, **kwargs):
-
+        x, y, phi = self.obs[3], self.obs[4], self.obs[5]
         plt.ion()
+        plt.figure('one')
         plt.cla()
+
         plt.title("Avoiding Obstacle")
         ax = plt.axes()
-        plt.axis("equal")
-        # plt.axis('off')
+        ax.set_aspect('equal')
+        ax.set_xlim([min(x - 2,self.axis_info.xmin), max(x + 2, self.axis_info.xmax)])
+        ax.set_ylim([self.axis_info.ymin, self.axis_info.ymax])
 
         plt.axhline(y=self.constraint['max_y'], lw=2, color='k')
         plt.axhline(y=self.constraint['min_y'], lw=2, color='k')
         plt.axhline(y=0.5*(self.constraint['min_y']+self.constraint['max_y']), lw=1,ls='--', color='k')
 
-        x, y, phi = self.obs[3], self.obs[4], self.obs[5]
+
 
         obstacle_x = self.obstacle_info.x
         obstacle_y = self.obstacle_info.y
@@ -162,16 +179,23 @@ class CarEnv(gym.Env):
         plt.plot([x - height * Sin(phi), x + width * Cos(phi) - height * Sin(phi)],
                  [y + height * Cos(phi), y + width * Sin(phi) + height * Cos(phi)], 'r')
 
-        text_x = 0.0
-        text_y = self.constraint.max_y + 2
+        text_x = self.axis_info.xmin + 5
+        text_xr = self.axis_info.xmax - 10
+        text_y = self.axis_info.ymax - 1
         plt.text(text_x, text_y, f'x: {self.obs[3]:.2f}m')
-        plt.text(text_x + 10, text_y, f'y: {self.obs[4]:.2f}m')
-        plt.text(text_x, text_y - 1, f'v_x: {self.obs[0]:.2f}m/s')
-        plt.text(text_x + 10, text_y - 1, f'v_y: {self.obs[1]:.2f}m/s')
-        plt.text(text_x + 5, text_y + 1, f'rewardy: {self.reward:.3f}')
+        plt.text(text_x , text_y - 1, f'y: {self.obs[4]:.2f}m')
+        plt.text(text_x, text_y - 2, f'phi:{self.obs[5]:.2f}')
+        plt.text(text_x, text_y - 3, f'v_x: {self.obs[0]:.2f}m/s')
+        plt.text(text_x, text_y - 4, f'v_y: {self.obs[1]:.2f}m/s')
+        plt.text(text_x, text_y - 5, f'r: {self.obs[3]:.2f}')
+
+        plt.text(text_xr, text_y, f'reward: {self.reward:.3f}')
+        plt.text(text_xr, text_y - 1, f'action: {float(self.action[0]):.3f} {float(self.action[1]):.3f}')
+        plt.text(text_xr, text_y - 2, f'value: {float(self.value):.3f}')
+
 
         plt.show()
-        plt.pause(0.15)
+        plt.pause(0.1)
 
     def _get_next_observation(self, action):
         state = tf.convert_to_tensor(self.obs[np.newaxis, :], dtype=tf.float32)
@@ -181,7 +205,7 @@ class CarEnv(gym.Env):
 
     def _get_reward(self):
         y = self.obs[4]
-        reward = (y-self.constraint.min_y)*1.0/self.frequency
+        reward = np.abs(y-self.constraint.min_y)*1.0/self.frequency
         return reward
 
     def _judge_collision(self, x, y):
@@ -235,6 +259,9 @@ class CarEnv(gym.Env):
             is_safe = self._judge_collision(self.obs[3],self.obs[4])
 
         return self.obs, rewards, is_safe
+
+    def set_value(self,v):
+        self.value = v
 
 
 def test_env():

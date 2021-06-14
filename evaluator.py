@@ -83,7 +83,10 @@ class Evaluator(object):
                 # debuging
                 # print(done, info['done_info'])
 
-                if info['done_info'] == 'good_done': break
+                if done:
+                    break
+
+                # if info['done_info'] == 'good_done': break
         else:
             while not done:
                 processed_obs = self.preprocessor.tf_process_obses(obs)
@@ -99,10 +102,10 @@ class Evaluator(object):
         # plt.figure(1)
         # plt.plot(range(len(action_list)), action_list)
         # plt.show()
-        for key in reward_info_dict_list[0].keys():
-            info_key = list(map(lambda x: x[key], reward_info_dict_list))
-            mean_key = sum(info_key) / len(info_key)
-            info_dict.update({key: mean_key})
+        # for key in reward_info_dict_list[0].keys():
+        #     info_key = list(map(lambda x: x[key], reward_info_dict_list))
+        #     mean_key = sum(info_key) / len(info_key)
+        #     info_dict.update({key: mean_key})
         info_dict.update(dict(episode_return=episode_return,
                               episode_len=episode_len))
         return info_dict

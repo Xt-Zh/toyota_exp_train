@@ -50,7 +50,7 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/high-dimension-result-local/experiment-2021-06-14-14-26-41'
+        test_dir = r'./results/high-dimension-result-local/experiment-2021-06-14-16-41-30'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
@@ -91,7 +91,7 @@ def built_AMPC_parser():
     # parser.add_argument('--alg_name', default='AMPC')           # learner : AMPC or Feasible
     parser.add_argument('--alg_name', default='Feasible')
     parser.add_argument('--M', type=int, default=1)
-    parser.add_argument('--num_rollout_list_for_policy_update', type=list, default=[5]) # can be modified smaller
+    parser.add_argument('--num_rollout_list_for_policy_update', type=list, default=[25]) # can be modified smaller
     parser.add_argument('--gamma', type=float, default=1.)
     parser.add_argument('--gradient_clip_norm', type=float, default=10)
     parser.add_argument('--init_punish_factor', type=float, default=5.)
@@ -106,7 +106,7 @@ def built_AMPC_parser():
     # buffer
     parser.add_argument('--max_buffer_size', type=int, default=1000)
     parser.add_argument('--replay_starts', type=int, default=300)
-    parser.add_argument('--replay_batch_size', type=int, default=10)
+    parser.add_argument('--replay_batch_size', type=int, default=128)
     parser.add_argument('--replay_alpha', type=float, default=0.6)
     parser.add_argument('--replay_beta', type=float, default=0.4)
     parser.add_argument('--buffer_log_interval', type=int, default=40000)
@@ -115,13 +115,13 @@ def built_AMPC_parser():
     parser.add_argument('--num_eval_episode', type=int, default=2)
     parser.add_argument('--eval_log_interval', type=int, default=1)
     parser.add_argument('--fixed_steps', type=int, default=50)
-    parser.add_argument('--eval_render', type=bool, default=False)
+    parser.add_argument('--eval_render', type=bool, default=True) # 在evaluate的时候是否画图
 
     # policy and model
     parser.add_argument('--value_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_model_cls', type=str, default='MLP')
     parser.add_argument('--policy_lr_schedule', type=list, default=[3e-5, 100000, 1e-5])
-    parser.add_argument('--value_lr_schedule', type=list, default=[8e-4, 100000, 1e-5])
+    parser.add_argument('--value_lr_schedule', type=list, default=[8e-3, 100000, 1e-5])
     parser.add_argument('--num_hidden_layers', type=int, default=2)
     parser.add_argument('--num_hidden_units', type=int, default=256)
     parser.add_argument('--hidden_activation', type=str, default='elu')
@@ -133,14 +133,14 @@ def built_AMPC_parser():
     parser.add_argument('--obs_preprocess_type', type=str, default='scale')
     parser.add_argument('--obs_scale', type=list, default=None)
     parser.add_argument('--reward_preprocess_type', type=str, default='scale')
-    parser.add_argument('--reward_scale', type=float, default=0.1)
+    parser.add_argument('--reward_scale', type=float, default=1.0)
     parser.add_argument('--reward_shift', type=float, default=0.)
 
     # optimizer (PABAL)
     parser.add_argument('--max_sampled_steps', type=int, default=0)
     parser.add_argument('--max_iter', type=int, default=100100)
     parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--num_learners', type=int, default=1)
+    parser.add_argument('--num_learners', type=int, default=5)
     parser.add_argument('--num_buffers', type=int, default=1)
     # parser.add_argument('--num_workers', type=int, default=10)
     # parser.add_argument('--num_learners', type=int, default=40)
@@ -149,7 +149,7 @@ def built_AMPC_parser():
     parser.add_argument('--grads_queue_size', type=int, default=20)
     parser.add_argument('--eval_interval', type=int, default=5000)
     parser.add_argument('--save_interval', type=int, default=5000)
-    parser.add_argument('--log_interval', type=int, default=1)
+    parser.add_argument('--log_interval', type=int, default=500)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -171,7 +171,7 @@ def built_parser(alg_name):
         env = gym.make(args.env_id)
         obs_space, act_space = env.observation_space, env.action_space
         args.obs_dim, args.act_dim = obs_space.shape[0], act_space.shape[0]
-        args.obs_scale = [1., 1., 1., 1., 1., 1., ] # TODO:modify
+        args.obs_scale = [0.2, 1., 2., 1 / 50., 1 / 50, 1 / 180.] # TODO:modify
         return args
 
 
@@ -179,7 +179,7 @@ def main(alg_name):
     args = built_parser(alg_name)
     logger.info('begin training agents with parameter {}'.format(str(args)))
     if args.mode == 'training':
-        ray.init(object_store_memory=1 * 1024 * 1024 * 1024)
+        ray.init(object_store_memory=5 * 1024 * 1024 * 1024)
         os.makedirs(args.result_dir)
         with open(args.result_dir + '/config.json', 'w', encoding='utf-8') as f:
             json.dump(vars(args), f, ensure_ascii=False, indent=4)
