@@ -10,11 +10,12 @@
 import logging
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 import gym
 from preprocessor import Preprocessor
-from utils.misc import TimerStat, args2envkwargs
+from utils.misc import TimerStat
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -111,8 +112,9 @@ class Evaluator(object):
         return info_dict
 
     def run_n_episode(self, n):
-        list_of_return = []
-        list_of_len = []
+        # list_of_return = []
+        # list_of_len = []
+
         list_of_info_dict = []
         for _ in range(n):
             logger.info('logging {}-th episode'.format(_))
@@ -123,7 +125,12 @@ class Evaluator(object):
             info_key = list(map(lambda x: x[key], list_of_info_dict))
             mean_key = sum(info_key) / len(info_key)
             n_info_dict.update({key: mean_key})
+
+
         return n_info_dict
+
+
+
 
     def set_weights(self, weights):
         self.policy_with_value.set_weights(weights)
@@ -134,6 +141,9 @@ class Evaluator(object):
     def run_evaluation(self, iteration):
         with self.eval_timer:
             self.iteration = iteration
+
+            self.draw_feasible_states(iteration)
+
             n_info_dict = self.run_n_episode(self.args.num_eval_episode)
             with self.writer.as_default():
                 for key, val in n_info_dict.items():
@@ -155,6 +165,61 @@ class Evaluator(object):
         plt.plot(range(action_np.shape[0]), action_np[:, 0])
         plt.show()
         a = 1
+
+    def draw_feasible_states(self,n):
+        fig = plt.figure(num='eval', figsize=(10, 5))
+
+        plt.title("Feasible States")
+        ax = plt.axes()
+        ax.set_aspect('equal')
+
+        xmin, xmax, ymin, ymax = (self.env.plot_option.xmin, self.env.plot_option.xmax,
+                                  self.env.constraint.min_y, self.env.constraint.max_y)
+
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
+
+        plt.axhline(y=self.env.constraint['max_y'], lw=2, color='k')
+        plt.axhline(y=self.env.constraint['min_y'], lw=2, color='k')
+        plt.axhline(y=0.5 * (self.env.constraint['min_y'] + self.env.constraint['max_y']), lw=1, ls='--', color='k')
+
+        obstacle_x = self.env.obstacle_info.x
+        obstacle_y = self.env.obstacle_info.y
+        obstacle_width = self.env.obstacle_info.width
+        obstacle_height = self.env.obstacle_info.height
+
+        ax.add_patch(plt.Rectangle((obstacle_x, obstacle_y),
+                                   obstacle_width,
+                                   obstacle_height, edgecolor='black', facecolor='black'))
+
+
+
+        xs = np.linspace(xmin,xmax,int((xmax-xmin)/0.1 +1))
+        ys = np.linspace(ymin,ymax,int((ymax-ymin)/0.1 +1))
+
+        xs,ys = np.meshgrid(xs,ys)
+
+        length = xs.shape[0] * xs.shape[1]
+
+        obs = np.vstack([np.ones(length) * self.env.expected_speed,
+                         np.zeros(length),
+                         np.zeros(length),
+                        xs.flatten(),
+                         ys.flatten(),
+                         np.zeros(length)]).T
+
+
+
+        processed_obs = self.preprocessor.tf_process_obses(obs)
+        value = self.policy_with_value.compute_value_net(processed_obs)
+        value = np.array(value).reshape(xs.shape[0],xs.shape[1])
+
+        fig_plot=ax.contourf(xs, ys, value, 100, linestyles=":", cmap='rainbow')
+        plt.colorbar(fig_plot)
+
+        fig.savefig(os.path.join(self.args.model_dir,f'testpic-{n}'))
+        plt.close(fig=fig)
+
 
 
 def test_trained_model(model_dir, ppc_params_dir, iteration):

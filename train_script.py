@@ -50,12 +50,12 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/high-dimension-result-local/experiment-2021-06-14-16-41-30'
+        test_dir = r'./results/obstacle-result-ecs/experiment-2021-06-14-21-17-39'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[0],
+                           test_iter_list=[50000, 100000, 1000000],
                            test_log_dir=test_log_dir,
                            num_eval_episode=3,
                            eval_log_interval=1,
@@ -140,21 +140,21 @@ def built_AMPC_parser():
     parser.add_argument('--max_sampled_steps', type=int, default=0)
     parser.add_argument('--max_iter', type=int, default=100100)
     parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--num_learners', type=int, default=5)
+    parser.add_argument('--num_learners', type=int, default=4)
     parser.add_argument('--num_buffers', type=int, default=1)
     # parser.add_argument('--num_workers', type=int, default=10)
     # parser.add_argument('--num_learners', type=int, default=40)
     # parser.add_argument('--num_buffers', type=int, default=10)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=20)
-    parser.add_argument('--eval_interval', type=int, default=5000)
-    parser.add_argument('--save_interval', type=int, default=5000)
+    parser.add_argument('--eval_interval', type=int, default=10000)
+    parser.add_argument('--save_interval', type=int, default=50000)
     parser.add_argument('--log_interval', type=int, default=500)
 
     # IO
     time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    results_dir = './results/high-dimension-result-local/experiment-{time}'.format(time=time_now)
-    # results_dir = './results/high-dimension-result-ecs/experiment-{time}'.format(time=time_now)
+    results_dir = './results/obstacle-result-local/experiment-{time}'.format(time=time_now)
+    # results_dir = './results/obstacle-result-ecs/experiment-{time}'.format(time=time_now)
     parser.add_argument('--result_dir', type=str, default=results_dir)
     parser.add_argument('--log_dir', type=str, default=results_dir + '/logs')
     parser.add_argument('--model_dir', type=str, default=results_dir + '/models')

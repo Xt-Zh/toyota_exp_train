@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from easydict import EasyDict as edict
-from numpy.random import normal
+from numpy.random import normal, uniform
 
 import gym
 from gym.envs.user_defined.ObstacleEnv.CarModel import VehicleDynamics
@@ -111,14 +111,17 @@ class CarEnv(gym.Env):
                                         width=5,
                                         height=2))
 
-        self.axis_info = edict(dict(xmin=-15,
-                                    xmax=30,
-                                    ymin=-2,
-                                    ymax=15))
+        self.plot_option = edict(dict(xmin=-15,
+                                      xmax=30,
+                                      ymin=-2,
+                                      ymax=15,
+                                      ))
+
+        self.expected_speed = 5
 
         self.frequency = 10
 
-        self.fig = plt.figure(num='one',figsize=(10,5))
+        self.fig = plt.figure(num='one', figsize=(10, 5))
 
     def reset(self):
         self.obs = self._reset_init_state()
@@ -136,7 +139,7 @@ class CarEnv(gym.Env):
         self.obs = obs
         self.action = action
         self.reward = reward
-        info = {'action': action,'done_info':done,'reward_info':0.0}  # 用于记录训练过程中的环境信息,便于观察训练状态
+        info = {'action': action, 'done_info': done, 'reward_info': 0.0}  # 用于记录训练过程中的环境信息,便于观察训练状态
         return obs, reward, done, info
 
     def render(self, **kwargs):
@@ -148,14 +151,12 @@ class CarEnv(gym.Env):
         plt.title("Avoiding Obstacle")
         ax = plt.axes()
         ax.set_aspect('equal')
-        ax.set_xlim([min(x - 2,self.axis_info.xmin), max(x + 2, self.axis_info.xmax)])
-        ax.set_ylim([self.axis_info.ymin, self.axis_info.ymax])
+        ax.set_xlim([min(x - 2, self.plot_option.xmin), max(x + 2, self.plot_option.xmax)])
+        ax.set_ylim([self.plot_option.ymin, self.plot_option.ymax])
 
         plt.axhline(y=self.constraint['max_y'], lw=2, color='k')
         plt.axhline(y=self.constraint['min_y'], lw=2, color='k')
-        plt.axhline(y=0.5*(self.constraint['min_y']+self.constraint['max_y']), lw=1,ls='--', color='k')
-
-
+        plt.axhline(y=0.5 * (self.constraint['min_y'] + self.constraint['max_y']), lw=1, ls='--', color='k')
 
         obstacle_x = self.obstacle_info.x
         obstacle_y = self.obstacle_info.y
@@ -179,11 +180,11 @@ class CarEnv(gym.Env):
         plt.plot([x - height * Sin(phi), x + width * Cos(phi) - height * Sin(phi)],
                  [y + height * Cos(phi), y + width * Sin(phi) + height * Cos(phi)], 'r')
 
-        text_x = self.axis_info.xmin + 5
-        text_xr = self.axis_info.xmax - 10
-        text_y = self.axis_info.ymax - 1
+        text_x = self.plot_option.xmin + 5
+        text_xr = self.plot_option.xmax - 10
+        text_y = self.plot_option.ymax - 1
         plt.text(text_x, text_y, f'x: {self.obs[3]:.2f}m')
-        plt.text(text_x , text_y - 1, f'y: {self.obs[4]:.2f}m')
+        plt.text(text_x, text_y - 1, f'y: {self.obs[4]:.2f}m')
         plt.text(text_x, text_y - 2, f'phi:{self.obs[5]:.2f}')
         plt.text(text_x, text_y - 3, f'v_x: {self.obs[0]:.2f}m/s')
         plt.text(text_x, text_y - 4, f'v_y: {self.obs[1]:.2f}m/s')
@@ -193,9 +194,8 @@ class CarEnv(gym.Env):
         plt.text(text_xr, text_y - 1, f'action: {float(self.action[0]):.3f} {float(self.action[1]):.3f}')
         plt.text(text_xr, text_y - 2, f'value: {float(self.value):.3f}')
 
-
         plt.show()
-        plt.pause(0.1)
+        plt.pause(0.05)
 
     def _get_next_observation(self, action):
         state = tf.convert_to_tensor(self.obs[np.newaxis, :], dtype=tf.float32)
@@ -205,7 +205,9 @@ class CarEnv(gym.Env):
 
     def _get_reward(self):
         y = self.obs[4]
-        reward = np.abs(y-self.constraint.min_y)*1.0/self.frequency
+        vx = self.obs[0]
+        reward = ((y - self.constraint.min_y) ** 2 + (vx - self.expected_speed) ** 2) / self.frequency
+        # reward: 到底部车道线的距离的平方 + 与期望速度之差的平方
         return reward
 
     def _judge_collision(self, x, y):
@@ -223,7 +225,6 @@ class CarEnv(gym.Env):
     def _get_done(self):
         v_x, v_y, _, x, y, _ = self.obs
 
-
         if x < self.constraint.min_x or \
                 x > self.constraint.max_x or \
                 y > self.constraint.max_y or \
@@ -236,31 +237,40 @@ class CarEnv(gym.Env):
         return self.done
 
     def _reset_init_state(self):
-        v_x_mean = 2.0
-        v_y_mean = 0.3
-        r_mean = 0.0
-        x_mean = -10.0
-        y_mean = 0.5
-        phi_mean = 0
+        # v_x_mean = 2.0
+        # v_y_mean = 0.3
+        # r_mean = 0.0
+        # x_mean = -10.0
+        # y_mean = 0.5
+        # phi_mean = 0
+        #
+        # state_ = np.hstack([normal(v_x_mean, 1.0, ),
+        #                     normal(v_y_mean, 0.3, ),
+        #                     normal(r_mean, 1, ),
+        #                     normal(x_mean, 5, ),
+        #                     normal(y_mean, 1, ),
+        #                     normal(phi_mean, 10, ),
+        #                     ]).astype(np.float32)
 
-        state_ = np.hstack([normal(v_x_mean, 1.0, ),
-                            normal(v_y_mean, 0.3, ),
-                            normal(r_mean, 1, ),
-                            normal(x_mean, 5, ),
-                            normal(y_mean, 1, ),
-                            normal(phi_mean, 10, ),
+        state_ = np.hstack([uniform(0, 5, ),
+                            uniform(0, 5, ),
+                            uniform(-1, 1, ),
+                            uniform(-10, 5, ),
+                            uniform(1, 5, ),
+                            uniform(-1, 1, ),
                             ]).astype(np.float32)
+
         return state_
 
     def rollout_out(self, actions):  # obses and actions are tensors, think of actions are in range [-1, 1]
         with tf.name_scope('model_step') as scope:
-            rewards  = self._get_reward()
+            rewards = self._get_reward()
             self.obs = self._get_next_observation(actions)
-            is_safe = self._judge_collision(self.obs[3],self.obs[4])
+            is_safe = self._judge_collision(self.obs[3], self.obs[4])
 
         return self.obs, rewards, is_safe
 
-    def set_value(self,v):
+    def set_value(self, v):
         self.value = v
 
 
