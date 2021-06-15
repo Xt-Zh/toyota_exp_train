@@ -142,7 +142,8 @@ class Evaluator(object):
         with self.eval_timer:
             self.iteration = iteration
 
-            self.draw_feasible_states(iteration)
+            self.draw_feasible_states(iteration,mode='value')
+            self.draw_feasible_states(iteration,mode='action')
 
             n_info_dict = self.run_n_episode(self.args.num_eval_episode)
             with self.writer.as_default():
@@ -166,7 +167,7 @@ class Evaluator(object):
         plt.show()
         a = 1
 
-    def draw_feasible_states(self,n):
+    def draw_feasible_states(self,n,mode='value'):
         fig = plt.figure(num='eval', figsize=(10, 5))
 
         plt.title("Feasible States")
@@ -211,13 +212,21 @@ class Evaluator(object):
 
 
         processed_obs = self.preprocessor.tf_process_obses(obs)
-        value = self.policy_with_value.compute_value_net(processed_obs)
-        value = np.array(value).reshape(xs.shape[0],xs.shape[1])
+
+        if mode == 'value':
+            value = self.policy_with_value.compute_value_net(processed_obs)
+            value = np.array(value).reshape(xs.shape[0],xs.shape[1])
+        elif mode == 'action':
+            value = self.policy_with_value.compute_mode(processed_obs)
+            value = np.array(value)[:,1].reshape(xs.shape[0],xs.shape[1])
 
         fig_plot=ax.contourf(xs, ys, value, 100, linestyles=":", cmap='rainbow')
         plt.colorbar(fig_plot)
 
-        fig.savefig(os.path.join(self.args.model_dir,f'testpic-{n}'))
+        if not os.path.exists(os.path.join(self.args.model_dir,mode)):
+            os.mkdir(os.path.join(self.args.model_dir,mode))
+        fig.savefig(os.path.join(self.args.model_dir,mode,f'{mode}-{n}'))
+
         plt.close(fig=fig)
 
 

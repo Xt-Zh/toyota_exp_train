@@ -110,7 +110,7 @@ class FeasibleLearner(object):
         # policy loss
         policy_loss = self.tf.reduce_mean(rewards_sum + now_state_value * discount)
 
-        rewards_absorb = self.tf.where(collision_info == True, self.tf.ones_like(rewards_sum) * 50, rewards_sum)
+        rewards_absorb = self.tf.where(collision_info == True, self.tf.ones_like(rewards_sum) * 100, rewards_sum)
         target = self.tf.stop_gradient(rewards_absorb + now_state_value * discount)
 
         # TODO:这里用哪一种更好？是先对reward_sum做absorb然后再和now_state_value相加，还是先相加再absorb?

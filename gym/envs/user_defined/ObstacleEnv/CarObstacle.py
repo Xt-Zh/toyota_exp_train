@@ -206,8 +206,9 @@ class CarEnv(gym.Env):
     def _get_reward(self):
         y = self.obs[4]
         vx = self.obs[0]
-        reward = ((y - self.constraint.min_y) ** 2 + (vx - self.expected_speed) ** 2) / self.frequency
-        # reward: 到底部车道线的距离的平方 + 与期望速度之差的平方
+        phi = self.obs[5]
+        reward = ((y - self.constraint.min_y) ** 2 + (vx - self.expected_speed) ** 2 + (phi * np.pi/ 180) ** 2) / self.frequency
+        # reward: 到底部车道线的距离的平方 + 与期望速度之差的平方 + 转向角的平方
         return reward
 
     def _judge_collision(self, x, y):
