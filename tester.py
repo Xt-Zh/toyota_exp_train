@@ -28,5 +28,5 @@ class Tester(object):
             model_load_dir = self.args.test_dir + '/models'
             ppc_params_load_dir = self.args.test_dir + '/models'
             self.evaluate_saved_model(model_load_dir, ppc_params_load_dir, ite)
-            self.evaluator.run_evaluation(ite)
+            self.evaluator.run_evaluation(ite,mode='test')
 

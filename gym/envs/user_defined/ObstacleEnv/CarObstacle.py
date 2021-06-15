@@ -133,7 +133,7 @@ class CarEnv(gym.Env):
 
     def step(self, action: np.ndarray):
         # action: steer, a_x
-        reward = self._get_reward()
+        reward = self._get_reward(action[0])
         done = self._get_done()
         obs = self._get_next_observation(action)
         self.obs = obs
@@ -203,11 +203,11 @@ class CarEnv(gym.Env):
         new_state, _ = self.dynamics.prediction(state, action, self.frequency)
         return np.array(new_state).flatten()
 
-    def _get_reward(self):
+    def _get_reward(self,action=0.0):
         y = self.obs[4]
         vx = self.obs[0]
         phi = self.obs[5]
-        reward = ((y - self.constraint.min_y) ** 2 + (vx - self.expected_speed) ** 2 + (phi * np.pi/ 180) ** 2) / self.frequency
+        reward = ((y - self.constraint.min_y) ** 2 + (vx - self.expected_speed) ** 2 + (phi * np.pi/ 180) ** 2 + action ** 2) / self.frequency
         # reward: 到底部车道线的距离的平方 + 与期望速度之差的平方 + 转向角的平方
         return reward
 
@@ -265,7 +265,7 @@ class CarEnv(gym.Env):
 
     def rollout_out(self, actions):  # obses and actions are tensors, think of actions are in range [-1, 1]
         with tf.name_scope('model_step') as scope:
-            rewards = self._get_reward()
+            rewards = self._get_reward(actions[0])
             self.obs = self._get_next_observation(actions)
             is_safe = self._judge_collision(self.obs[3], self.obs[4])
 

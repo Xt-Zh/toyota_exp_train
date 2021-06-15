@@ -50,12 +50,12 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/obstacle-result-ecs/experiment-2021-06-14-21-17-39'
+        test_dir = r'./results/obstacle-result-ecs/experiment-2021-06-15-13-45-28-action-reward'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[50000, 100000, 1000000],
+                           test_iter_list=[50000, 100000, 150000],
                            test_log_dir=test_log_dir,
                            num_eval_episode=3,
                            eval_log_interval=1,
@@ -115,7 +115,7 @@ def built_AMPC_parser():
     parser.add_argument('--num_eval_episode', type=int, default=2)
     parser.add_argument('--eval_log_interval', type=int, default=1)
     parser.add_argument('--fixed_steps', type=int, default=50)
-    parser.add_argument('--eval_render', type=bool, default=True) # 在evaluate的时候是否画图
+    parser.add_argument('--eval_render', type=bool, default=False) # 在evaluate的时候是否画图
 
     # policy and model
     parser.add_argument('--value_model_cls', type=str, default='MLP')
@@ -147,8 +147,8 @@ def built_AMPC_parser():
     # parser.add_argument('--num_buffers', type=int, default=10)
     parser.add_argument('--max_weight_sync_delay', type=int, default=300)
     parser.add_argument('--grads_queue_size', type=int, default=20)
-    parser.add_argument('--eval_interval', type=int, default=10000)
-    parser.add_argument('--save_interval', type=int, default=50000)
+    parser.add_argument('--eval_interval', type=int, default=1000)
+    parser.add_argument('--save_interval', type=int, default=10000)
     parser.add_argument('--log_interval', type=int, default=500)
 
     # IO
@@ -179,7 +179,7 @@ def main(alg_name):
     args = built_parser(alg_name)
     logger.info('begin training agents with parameter {}'.format(str(args)))
     if args.mode == 'training':
-        ray.init(object_store_memory=5 * 1024 * 1024 * 1024)
+        ray.init(object_store_memory=2 * 1024 * 1024 * 1024)
         os.makedirs(args.result_dir)
         with open(args.result_dir + '/config.json', 'w', encoding='utf-8') as f:
             json.dump(vars(args), f, ensure_ascii=False, indent=4)

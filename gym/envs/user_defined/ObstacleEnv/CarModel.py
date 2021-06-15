@@ -1,7 +1,9 @@
-import tensorflow as tf
-import numpy as np
-from easydict import EasyDict as edict
 import os
+
+import numpy as np
+import tensorflow as tf
+from easydict import EasyDict as edict
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 class VehicleDynamics(object):
@@ -44,6 +46,8 @@ class VehicleDynamics(object):
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
+
+        self.expected_speed = 5
 
     def f_xu(self, states, actions, tau):  # states and actions are tensors, [[], [], ...]
         """
@@ -92,19 +96,21 @@ class VehicleDynamics(object):
     def rollout_out(self, actions):  # obses and actions are tensors, think of actions are in range [-1, 1]
         # actions shape: (bs, 2)
         with tf.name_scope('model_step') as scope:
-            rewards  = self._get_reward()
+            rewards  = self._get_reward(actions[:,1])
             self.obses, _ = self.prediction(self.obses, actions, self.frequency)
             is_not_safe = self._judge_collision(self.obses[:,3],self.obses[:,4])
 
         return self.obses, rewards, is_not_safe
 
-    def _get_reward(self):
+    def _get_reward(self,action):
         """
         根据当前状态获取reward（还没有考虑动作的影响）
         :return: shape:(bs,)
         """
         y = self.obses[:,4]
-        reward = tf.abs(y-self.constraint.min_y)*1.0/self.frequency
+        vx = self.obses[:,0]
+        phi = self.obses[:,5]
+        reward = (tf.square(y - self.constraint.min_y)+ tf.square(vx - self.expected_speed) + tf.square( phi * np.pi / 180) + tf.square(action)) / self.frequency
         return reward
 
     # def _get_next_observations(self, actions):
@@ -118,9 +124,9 @@ class VehicleDynamics(object):
         obs_height = self.obstacle_info.height
 
         is_collapse = ((((obs_x <= xs) & (xs <= obs_x + obs_width)) |
-        ((obs_x<=xs+self.car_info.width) & (xs+self.car_info.width <= obs_x + obs_width))) &
+                        ((obs_x <= xs + self.car_info.width) & (xs + self.car_info.width <= obs_x + obs_width))) &
                        (((obs_y <= ys) & (ys <= obs_y + obs_height)) |
-         ((obs_y <= ys + self.car_info.height) & (ys + self.car_info.height <= obs_y + obs_height)))) | \
+                        ((obs_y <= ys + self.car_info.height) & (ys + self.car_info.height <= obs_y + obs_height)))) | \
                       (ys < self.constraint.min_y) & (ys < self.constraint.max_y)
 
         # if obs_x <= xs <= obs_x + obs_width or \

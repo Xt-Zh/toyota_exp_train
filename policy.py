@@ -116,7 +116,7 @@ class Policy4Feasible(tf.Module):
         n_hiddens, n_units, hidden_activation = self.args.num_hidden_layers, self.args.num_hidden_units, self.args.hidden_activation
         value_model_cls, policy_model_cls = NAME2MODELCLS[self.args.value_model_cls], \
                                             NAME2MODELCLS[self.args.policy_model_cls]
-        self.policy = policy_model_cls(obs_dim, n_hiddens, n_units, hidden_activation, act_dim * 2, name='policy',
+        self.policy = policy_model_cls(obs_dim, n_hiddens, n_units, hidden_activation, act_dim, name='policy',
                                        output_activation=self.args.policy_out_activation)
         policy_lr_schedule = PolynomialDecay(*self.args.policy_lr_schedule)
         self.policy_optimizer = self.tf.keras.optimizers.Adam(policy_lr_schedule, name='adam_opt')
@@ -160,16 +160,16 @@ class Policy4Feasible(tf.Module):
     @tf.function
     def compute_mode(self, obs):
         logits = self.policy(obs)
-        mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-        return mean
+        # mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
+        return logits
 
     @tf.function
     def compute_action(self, obs):
         with self.tf.name_scope('compute_action') as scope:
             logits = self.policy(obs)
             assert self.args.deterministic_policy
-            mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
-            return mean, 0.
+            # mean, _ = self.tf.split(logits, num_or_size_splits=2, axis=-1)
+            return logits, 0.
 
 
     @tf.function

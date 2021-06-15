@@ -138,12 +138,13 @@ class Evaluator(object):
     def set_ppc_params(self, params):
         self.preprocessor.set_params(params)
 
-    def run_evaluation(self, iteration):
+    def run_evaluation(self, iteration,mode='train'):
         with self.eval_timer:
             self.iteration = iteration
 
-            self.draw_feasible_states(iteration,mode='value')
-            self.draw_feasible_states(iteration,mode='action')
+            if mode =='train':
+                self.draw_feasible_states(iteration,mode='value')
+                self.draw_feasible_states(iteration,mode='action')
 
             n_info_dict = self.run_n_episode(self.args.num_eval_episode)
             with self.writer.as_default():
