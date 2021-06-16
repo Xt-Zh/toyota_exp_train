@@ -80,7 +80,7 @@ class Evaluator(object):
                 if render:
                     if mode == 'test':
                         xmin, xmax, ymin, ymax = (self.env.plot_option.xmin, self.env.plot_option.xmax,
-                                                  self.env.constraint.min_y, self.env.constraint.max_y)
+                                                  self.env.boundary_info.min_y, self.env.boundary_info.max_y)
 
                         xs = np.linspace(xmin, xmax, int((xmax - xmin) / 0.1 + 1))
                         ys = np.linspace(ymin, ymax, int((ymax - ymin) / 0.1 + 1))
@@ -125,14 +125,6 @@ class Evaluator(object):
         episode_return = sum(reward_list)
         episode_len = len(reward_list)
         info_dict = dict()
-        # import matplotlib.pyplot as plt
-        # plt.figure(1)
-        # plt.plot(range(len(action_list)), action_list)
-        # plt.show()
-        # for key in reward_info_dict_list[0].keys():
-        #     info_key = list(map(lambda x: x[key], reward_info_dict_list))
-        #     mean_key = sum(info_key) / len(info_key)
-        #     info_dict.update({key: mean_key})
         info_dict.update(dict(episode_return=episode_return,
                               episode_len=episode_len))
         return info_dict
@@ -202,13 +194,13 @@ class Evaluator(object):
         ax.set_aspect('equal')
 
         xmin, xmax, ymin, ymax = (self.env.plot_option.xmin, self.env.plot_option.xmax,
-                                  self.env.constraint.min_y, self.env.constraint.max_y)
+                                  self.env.boundary_info.min_y, self.env.boundary_info.max_y)
 
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
 
-        plt.axhline(y=self.env.constraint['max_y'], lw=2, color='k')
-        plt.axhline(y=self.env.constraint['min_y'], lw=2, color='k')
+        plt.axhline(y=self.env.boundary_info['max_y'], lw=2, color='k')
+        plt.axhline(y=self.env.boundary_info['min_y'], lw=2, color='k')
         plt.axhline(y=0.5 * (self.env.constraint['min_y'] + self.env.constraint['max_y']), lw=1, ls='--', color='k')
 
         obstacle_x = self.env.obstacle_info.x
@@ -248,7 +240,7 @@ class Evaluator(object):
             value = np.array(value)[:,1].reshape(xs.shape[0],xs.shape[1])
 
         fig_plot=ax.contourf(xs, ys, value, 100, linestyles=":", cmap='rainbow')
-        plt.colorbar(fig_plot)
+        plt.colorbar(fig_plot,orientation = 'horizontal')
 
         if not os.path.exists(os.path.join(self.args.model_dir,mode)):
             os.mkdir(os.path.join(self.args.model_dir,mode))
@@ -257,40 +249,6 @@ class Evaluator(object):
         plt.close(fig=fig)
 
 
-
-def test_trained_model(model_dir, ppc_params_dir, iteration):
-    from train_script import built_mixedpg_parser
-    from policy import PolicyWithQs
-    args = built_mixedpg_parser()
-    evaluator = Evaluator(PolicyWithQs, args.env_id, args)
-    evaluator.load_weights(model_dir, iteration)
-    evaluator.load_ppc_params(ppc_params_dir)
-    return evaluator.metrics(1000, render=False, reset=False)
-
-
-def atest_trained_model(model_dir, ppc_params_dir, iteration):
-    from train_script import built_AMPC_parser
-    from policy import Policy4Toyota
-    args = built_AMPC_parser()
-    evaluator = Evaluator(Policy4Toyota, args.env_id, args)
-    evaluator.load_weights(model_dir, iteration)
-    # evaluator.load_ppc_params(ppc_params_dir)
-    path = model_dir + '/all_obs.npy'
-    evaluator.compute_action_from_batch_obses(path)
-
-
-def test_evaluator():
-    import ray
-    ray.init()
-    import time
-    from train_script import built_parser
-    from policy import Policy4Toyota
-    args = built_parser('AMPC')
-    # evaluator = Evaluator(Policy4Toyota, args.env_id, args)
-    # evaluator.run_evaluation(3)
-    evaluator = ray.remote(num_cpus=1)(Evaluator).remote(Policy4Toyota, args.env_id, args)
-    evaluator.run_evaluation.remote(3)
-    time.sleep(10000)
 
 
 if __name__ == '__main__':

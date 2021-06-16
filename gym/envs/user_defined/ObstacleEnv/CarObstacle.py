@@ -97,8 +97,8 @@ class CarEnv(gym.Env):
 
         self.dynamics = VehicleDynamics(bs=10)
 
-        self.car_info = edict({'width': 2,  # x_length
-                               'height': 0.8  # y_length
+        self.car_info = edict({'width': 4,  # x_length
+                               'height': 1.8  # y_length
                                })
         self.constraint = edict({'max_y': 6.0,
                                  'min_y': 0.0,
@@ -106,8 +106,12 @@ class CarEnv(gym.Env):
                                  'max_x': 30.0,
                                  'min_x': -30.0,
                                  })
+
+        self.boundary_info = edict(dict(min_y = -1.0,
+                                        max_y = 7.0))
+
         self.obstacle_info = edict(dict(x=10,
-                                        y=0.5,
+                                        y=0,
                                         width=5,
                                         height=2))
 
@@ -154,8 +158,8 @@ class CarEnv(gym.Env):
         ax.set_xlim([min(x - 2, self.plot_option.xmin), max(x + 2, self.plot_option.xmax)])
         ax.set_ylim([self.plot_option.ymin, self.plot_option.ymax])
 
-        plt.axhline(y=self.constraint['max_y'], lw=2, color='k')
-        plt.axhline(y=self.constraint['min_y'], lw=2, color='k')
+        plt.axhline(y=self.boundary_info['max_y'], lw=2, color='k')
+        plt.axhline(y=self.boundary_info['min_y'], lw=2, color='k')
         plt.axhline(y=0.5 * (self.constraint['min_y'] + self.constraint['max_y']), lw=1, ls='--', color='k')
 
 
@@ -246,26 +250,12 @@ class CarEnv(gym.Env):
         return self.done
 
     def _reset_init_state(self):
-        # v_x_mean = 2.0
-        # v_y_mean = 0.3
-        # r_mean = 0.0
-        # x_mean = -10.0
-        # y_mean = 0.5
-        # phi_mean = 0
-        #
-        # state_ = np.hstack([normal(v_x_mean, 1.0, ),
-        #                     normal(v_y_mean, 0.3, ),
-        #                     normal(r_mean, 1, ),
-        #                     normal(x_mean, 5, ),
-        #                     normal(y_mean, 1, ),
-        #                     normal(phi_mean, 10, ),
-        #                     ]).astype(np.float32)
 
-        state_ = np.hstack([uniform(0, 5, ),
-                            uniform(0, 5, ),
+        state_ = np.hstack([uniform(5, 10, ),
+                            uniform(0, 10, ),
                             uniform(-1, 1, ),
                             uniform(-15, -10, ),
-                            uniform(1, 3, ),
+                            uniform(0, 5, ),
                             uniform(-1, 1, ),
                             ]).astype(np.float32)
 
@@ -273,7 +263,7 @@ class CarEnv(gym.Env):
 
     def rollout_out(self, actions):  # obses and actions are tensors, think of actions are in range [-1, 1]
         with tf.name_scope('model_step') as scope:
-            rewards = self._get_reward(actions[0])
+            rewards = self._get_reward(actions[1])
             self.obs = self._get_next_observation(actions)
             is_safe = self._judge_collision(self.obs[3], self.obs[4])
 

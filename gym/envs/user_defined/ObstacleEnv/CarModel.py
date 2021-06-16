@@ -17,8 +17,8 @@ class VehicleDynamics(object):
         self.frequency = 10
         self.safety = np.ones(shape=(bs, 1),dtype=int)
 
-        self.car_info = edict({'width': 2,  # x_length
-                               'height': 0.8  # y_length
+        self.car_info = edict({'width': 4,  # x_length
+                               'height': 1.8  # y_length
                                })
         self.constraint = edict({'max_y': 6.0,
                                  'min_y': 0.0,
@@ -104,7 +104,6 @@ class VehicleDynamics(object):
 
     def _get_reward(self,action):
         """
-        根据当前状态获取reward（还没有考虑动作的影响）
         :return: shape:(bs,)
         """
         y = self.obses[:,4]
