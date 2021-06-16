@@ -146,7 +146,7 @@ class CarEnv(gym.Env):
         x, y, phi = self.obs[3], self.obs[4], self.obs[5]
         plt.ion()
         plt.figure('one')
-        plt.cla()
+        plt.clf()
 
         plt.title("Avoiding Obstacle")
         ax = plt.axes()
@@ -157,6 +157,14 @@ class CarEnv(gym.Env):
         plt.axhline(y=self.constraint['max_y'], lw=2, color='k')
         plt.axhline(y=self.constraint['min_y'], lw=2, color='k')
         plt.axhline(y=0.5 * (self.constraint['min_y'] + self.constraint['max_y']), lw=1, ls='--', color='k')
+
+
+        if 'value' in kwargs:
+            value = kwargs['value']
+            xs = kwargs['xs']
+            ys = kwargs['ys']
+            fig_plot = ax.contourf(xs, ys, value, 100, linestyles=":", cmap='rainbow')
+            self.fig.colorbar(fig_plot,orientation='horizontal')
 
         obstacle_x = self.obstacle_info.x
         obstacle_y = self.obstacle_info.y
@@ -256,8 +264,8 @@ class CarEnv(gym.Env):
         state_ = np.hstack([uniform(0, 5, ),
                             uniform(0, 5, ),
                             uniform(-1, 1, ),
-                            uniform(-10, 5, ),
-                            uniform(1, 5, ),
+                            uniform(-15, -10, ),
+                            uniform(1, 3, ),
                             uniform(-1, 1, ),
                             ]).astype(np.float32)
 

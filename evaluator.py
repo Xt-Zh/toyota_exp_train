@@ -62,13 +62,13 @@ class Evaluator(object):
         self.load_weights(model_load_dir, iteration)
         self.load_ppc_params(ppc_params_load_dir)
 
-    def run_an_episode(self, steps=None, render=True):
+    def run_an_episode(self, mode, steps=None, render=True, ):
         reward_list = []
         reward_info_dict_list = []
         action_list = []
         done = 0
         obs = self.env.reset()
-        if render: self.env.render()
+        # if render: self.env.render()
         if steps is not None:
             for _ in range(steps):
                 processed_obs = self.preprocessor.tf_process_obses(obs)
@@ -77,7 +77,33 @@ class Evaluator(object):
                 self.env.set_value(value)
                 obs, reward, done, info = self.env.step(action.numpy()[0])
                 reward_info_dict_list.append(info['reward_info'])
-                if render: self.env.render()
+                if render:
+                    if mode == 'test':
+                        xmin, xmax, ymin, ymax = (self.env.plot_option.xmin, self.env.plot_option.xmax,
+                                                  self.env.constraint.min_y, self.env.constraint.max_y)
+
+                        xs = np.linspace(xmin, xmax, int((xmax - xmin) / 0.1 + 1))
+                        ys = np.linspace(ymin, ymax, int((ymax - ymin) / 0.1 + 1))
+
+                        xs, ys = np.meshgrid(xs, ys)
+
+                        length = xs.shape[0] * xs.shape[1]
+
+                        plot_states = np.vstack([np.ones(length) * obs[0],
+                                         np.ones(length) * obs[1],
+                                         np.ones(length) * obs[2],
+                                         xs.flatten(),
+                                         ys.flatten(),
+                                         np.ones(length) * obs[5]]).T
+
+                        processed_obs = self.preprocessor.tf_process_obses(plot_states)
+                        value = self.policy_with_value.compute_value_net(processed_obs)
+                        value = np.array(value).reshape(xs.shape[0], xs.shape[1])
+
+                        self.env.render(xs=xs, ys=ys, value=value)
+                    else:
+                        self.env.render()
+
                 reward_list.append(reward)
                 action_list.append(action[0])
 
@@ -111,14 +137,14 @@ class Evaluator(object):
                               episode_len=episode_len))
         return info_dict
 
-    def run_n_episode(self, n):
+    def run_n_episode(self, n, mode):
         # list_of_return = []
         # list_of_len = []
 
         list_of_info_dict = []
         for _ in range(n):
             logger.info('logging {}-th episode'.format(_))
-            info_dict = self.run_an_episode(self.args.fixed_steps, self.args.eval_render)
+            info_dict = self.run_an_episode(mode, self.args.fixed_steps, self.args.eval_render,)
             list_of_info_dict.append(info_dict.copy())
         n_info_dict = dict()
         for key in list_of_info_dict[0].keys():
@@ -146,7 +172,7 @@ class Evaluator(object):
                 self.draw_feasible_states(iteration,mode='value')
                 self.draw_feasible_states(iteration,mode='action')
 
-            n_info_dict = self.run_n_episode(self.args.num_eval_episode)
+            n_info_dict = self.run_n_episode(self.args.num_eval_episode, mode)
             with self.writer.as_default():
                 for key, val in n_info_dict.items():
                     self.tf.summary.scalar("evaluation/{}".format(key), val, step=self.iteration)

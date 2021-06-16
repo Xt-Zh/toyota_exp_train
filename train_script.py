@@ -50,12 +50,12 @@ def built_AMPC_parser():
     mode = parser.parse_args().mode
 
     if mode == 'testing':
-        test_dir = r'./results/obstacle-result-ecs/experiment-2021-06-15-13-45-28-action-reward'
+        test_dir = r'./results/obstacle-result-ecs/experiment-2021-06-16-13-06-08-action-reard'
         params = json.loads(open(test_dir + '/config.json').read())
         time_now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         test_log_dir = params['log_dir'] + '/tester/test-{}'.format(time_now)
         params.update(dict(test_dir=test_dir,
-                           test_iter_list=[50000, 100000, 150000],
+                           test_iter_list=[500000, 1000000],
                            test_log_dir=test_log_dir,
                            num_eval_episode=3,
                            eval_log_interval=1,
@@ -91,7 +91,7 @@ def built_AMPC_parser():
     # parser.add_argument('--alg_name', default='AMPC')           # learner : AMPC or Feasible
     parser.add_argument('--alg_name', default='Feasible')
     parser.add_argument('--M', type=int, default=1)
-    parser.add_argument('--num_rollout_list_for_policy_update', type=list, default=[25]) # can be modified smaller
+    parser.add_argument('--num_rollout_list_for_policy_update', type=list, default=[5]) # can be modified smaller
     parser.add_argument('--gamma', type=float, default=1.)
     parser.add_argument('--gradient_clip_norm', type=float, default=10)
     parser.add_argument('--init_punish_factor', type=float, default=5.)
@@ -133,7 +133,7 @@ def built_AMPC_parser():
     parser.add_argument('--obs_preprocess_type', type=str, default='scale')
     parser.add_argument('--obs_scale', type=list, default=None)
     parser.add_argument('--reward_preprocess_type', type=str, default='scale')
-    parser.add_argument('--reward_scale', type=float, default=1.0)
+    parser.add_argument('--reward_scale', type=float, default=0.1)
     parser.add_argument('--reward_shift', type=float, default=0.)
 
     # optimizer (PABAL)
